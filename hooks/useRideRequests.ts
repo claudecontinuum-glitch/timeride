@@ -1,28 +1,35 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js"
 import type { RideRequest } from "@/lib/types"
-import {
-  RIDE_REQUESTS_KEY,
-  getRideRequests,
-  acceptRideRequest,
-  getPendingRequestsNearDriver,
-} from "@/lib/mocks/rideRequests"
-import { SIGUA_CENTER, DEFAULT_RADIUS_M } from "@/lib/constants"
+import { getSupabaseBrowser } from "@/lib/supabase"
+import { DEFAULT_RADIUS_M, SIGUA_CENTER } from "@/lib/constants"
+
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
 
 interface UseRideRequestsReturn {
   available: boolean
   setAvailable: (v: boolean) => void
   currentRequest: RideRequest | null
-  acceptRequest: (id: string, taxistaId: string) => void
+  acceptRequest: (id: string, taxistaId: string) => Promise<void>
   rejectRequest: (id: string) => void
 }
 
 /**
  * Hook de ride requests para taxista.
- * Lee de localStorage y escucha storage events para recibir requests en tiempo real
- * desde otra pestaña (donde el pasajero creó el request).
- * TODO Supabase: reemplazar por supabase.channel("ride_requests").on("postgres_changes")
+ * Suscripción Realtime a ride_requests con status=pending.
+ * Filtra en cliente por distancia al taxista.
  */
 export function useRideRequests(
   driverPosition?: { lat: number; lng: number } | null
@@ -31,6 +38,7 @@ export function useRideRequests(
   const [currentRequest, setCurrentRequest] = useState<RideRequest | null>(null)
   const currentRequestRef = useRef<RideRequest | null>(null)
   const positionRef = useRef(driverPosition ?? SIGUA_CENTER)
+  const channelRef = useRef<ReturnType<typeof getSupabaseBrowser>["channel"] | null>(null)
 
   // Mantener ref sincronizada
   useEffect(() => {
@@ -43,19 +51,121 @@ export function useRideRequests(
     currentRequestRef.current = currentRequest
   }, [currentRequest])
 
-  const checkForNewRequests = useCallback(() => {
-    // Si ya tenemos un request activo no buscar más
+  const checkPendingRequests = useCallback(async () => {
     if (currentRequestRef.current) return
 
+    const supabase = getSupabaseBrowser()
     const { lat, lng } = positionRef.current
-    const pending = getPendingRequestsNearDriver(lat, lng, DEFAULT_RADIUS_M)
 
-    if (pending.length > 0) {
-      const newest = pending.sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      )[0]
-      setCurrentRequest(newest)
-      currentRequestRef.current = newest
+    try {
+      const { data, error } = await supabase
+        .from("ride_requests")
+        .select("*, profiles!pasajero_id(*)")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+
+      if (error) {
+        console.error("Failed to fetch pending ride requests", error)
+        return
+      }
+
+      // Filtrar por distancia en cliente
+      const nearby = (data ?? [])
+        .map((row: Record<string, unknown>) => ({
+          id: row["id"] as string,
+          pasajero_id: row["pasajero_id"] as string,
+          pickup_lat: row["pickup_lat"] as number,
+          pickup_lng: row["pickup_lng"] as number,
+          status: row["status"] as RideRequest["status"],
+          accepted_by: row["accepted_by"] as string | null,
+          created_at: row["created_at"] as string,
+          accepted_at: row["accepted_at"] as string | null,
+          pasajero: row["profiles"] as RideRequest["pasajero"],
+        }))
+        .filter(
+          (r: RideRequest) =>
+            haversineMeters(lat, lng, r.pickup_lat, r.pickup_lng) <= DEFAULT_RADIUS_M
+        )
+
+      if (nearby.length > 0) {
+        const newest = nearby[0] as RideRequest
+        setCurrentRequest(newest)
+        currentRequestRef.current = newest
+      }
+    } catch (err) {
+      console.error("Unexpected error fetching ride requests", err)
+    }
+  }, [])
+
+  const subscribeToRequests = useCallback(() => {
+    const supabase = getSupabaseBrowser()
+
+    const channel = supabase
+      .channel("ride_requests_taxi")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "ride_requests",
+          filter: "status=eq.pending",
+        },
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+          if (currentRequestRef.current) return
+
+          const row = payload.new as Record<string, unknown>
+          const { lat, lng } = positionRef.current
+          const pickupLat = row["pickup_lat"] as number
+          const pickupLng = row["pickup_lng"] as number
+          const dist = haversineMeters(lat, lng, pickupLat, pickupLng)
+
+          if (dist <= DEFAULT_RADIUS_M) {
+            const newRequest: RideRequest = {
+              id: row["id"] as string,
+              pasajero_id: row["pasajero_id"] as string,
+              pickup_lat: pickupLat,
+              pickup_lng: pickupLng,
+              status: row["status"] as RideRequest["status"],
+              accepted_by: row["accepted_by"] as string | null,
+              created_at: row["created_at"] as string,
+              accepted_at: row["accepted_at"] as string | null,
+            }
+            setCurrentRequest(newRequest)
+            currentRequestRef.current = newRequest
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "ride_requests",
+        },
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+          const updated = payload.new as Record<string, unknown>
+          if (currentRequestRef.current?.id === updated["id"]) {
+            setCurrentRequest((prev) =>
+              prev ? { ...prev, ...updated } as RideRequest : null
+            )
+          }
+        }
+      )
+      .subscribe((status: string) => {
+        if (status === "CHANNEL_ERROR") {
+          console.error("Realtime channel error on ride_requests")
+        }
+      })
+
+    channelRef.current = channel
+    return channel
+  }, [])
+
+  const unsubscribe = useCallback(() => {
+    const supabase = getSupabaseBrowser()
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current as Parameters<typeof supabase.removeChannel>[0])
+      channelRef.current = null
     }
   }, [])
 
@@ -65,52 +175,52 @@ export function useRideRequests(
       if (!v) {
         setCurrentRequest(null)
         currentRequestRef.current = null
+        unsubscribe()
       } else {
-        // Revisar inmediatamente si hay requests
-        checkForNewRequests()
+        // Buscar requests existentes + suscribir
+        checkPendingRequests()
+        subscribeToRequests()
       }
     },
-    [checkForNewRequests]
+    [checkPendingRequests, subscribeToRequests, unsubscribe]
   )
 
+  // Limpiar suscripción al desmontar
   useEffect(() => {
-    if (!available) return
-
-    // Revisar al montar
-    checkForNewRequests()
-
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key !== RIDE_REQUESTS_KEY) return
-      checkForNewRequests()
+    return () => {
+      unsubscribe()
     }
+  }, [unsubscribe])
 
-    window.addEventListener("storage", handleStorage)
-    return () => window.removeEventListener("storage", handleStorage)
-  }, [available, checkForNewRequests])
+  const acceptRequest = useCallback(async (id: string, taxistaId: string) => {
+    const supabase = getSupabaseBrowser()
 
-  // Re-verificar periódicamente por si el storage event no llegó
-  useEffect(() => {
-    if (!available) return
-    const interval = setInterval(checkForNewRequests, 5000)
-    return () => clearInterval(interval)
-  }, [available, checkForNewRequests])
+    try {
+      const { data, error } = await supabase
+        .from("ride_requests")
+        .update({
+          status: "accepted",
+          accepted_by: taxistaId,
+          accepted_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .select()
+        .single()
 
-  const acceptRequest = useCallback((id: string, taxistaId: string) => {
-    // TODO Supabase: UPDATE ride_requests SET status=accepted, accepted_by=user.id WHERE id=id
-    acceptRideRequest(id, taxistaId)
-    // Mantener visible en la pantalla del taxista para que vea la ruta
-    // (solo limpiamos el popup de "nueva request")
-    const requests = getRideRequests()
-    const accepted = requests.find((r) => r.id === id)
-    if (accepted) {
-      setCurrentRequest({ ...accepted })
+      if (error) {
+        console.error("Failed to accept ride request", error)
+        return
+      }
+
+      setCurrentRequest(data as RideRequest)
+      currentRequestRef.current = data as RideRequest
+    } catch (err) {
+      console.error("Unexpected error accepting ride request", err)
     }
   }, [])
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const rejectRequest = useCallback((_id: string) => {
-    // TODO Supabase: UPDATE ride_requests SET status=cancelled WHERE id=_id
-    // Por ahora solo lo ignoramos localmente (no eliminamos para que otros taxistas puedan verlo)
+    // Solo ignoramos localmente — no cancelamos para que otro taxista pueda aceptar
     setCurrentRequest(null)
     currentRequestRef.current = null
   }, [])
