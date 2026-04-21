@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TimeRide
 
-## Getting Started
+App de mobility hiper-local para Siguatepeque, Honduras.
+Conductores publican ubicacion y rutas en vivo. Pasajeros ven conductores cercanos y piden taxis.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 App Router
+- Supabase (Auth + Postgres + PostGIS + Realtime) — **pendiente conectar**
+- Leaflet + OpenStreetMap (gratis)
+- Tailwind CSS v4
+- TypeScript strict
+
+## Correr localmente
 
 ```bash
+# 1. Instalar dependencias (ya instaladas si clonaste el repo)
+npm install
+
+# 2. Copiar env vars
+cp .env.example .env.local
+# Editar .env.local con tus credenciales de Supabase
+
+# 3. Correr dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abrir http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Auth en modo mock
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Mientras Supabase no este conectado, la app usa un mock de auth basado en cookies.
+Para testear:
 
-## Learn More
+1. Ir a /signup y crear una cuenta con cualquier email/password
+2. El onboarding te pregunta tu rol (pasajero / conductor)
+3. Segun el rol, aterrizas en la pantalla correspondiente
 
-To learn more about Next.js, take a look at the following resources:
+El mock persiste entre recargas via localStorage + cookie.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Env vars necesarias (cuando Supabase este listo)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Variable | Descripcion |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | URL del proyecto Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon key publica de Supabase |
 
-## Deploy on Vercel
+## TODO para conectar Supabase
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Los lugares exactos de integracion estan marcados con `// TODO Supabase:` en el codigo:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `lib/mocks/auth.ts` — reemplazar `useAuth()` por hook real con `@supabase/ssr`
+- `app/login/page.tsx` — `supabase.auth.signInWithPassword()`
+- `app/signup/page.tsx` — `supabase.auth.signUp()`
+- `app/onboarding/page.tsx` — `supabase.from("profiles").insert()`
+- `hooks/useDriverShift.ts` — INSERT en `route_paths`, `route_stops`, UPDATE en `driver_locations`
+- `hooks/useRideRequests.ts` — Supabase Realtime channel en `ride_requests`
+- `app/app/pasajero/page.tsx` — `useDriverLocations()` hook con query `ST_DWithin`
+- `app/app/settings/page.tsx` — `supabase.from("profiles").delete()` + `supabase.auth.signOut()`
+- `proxy.ts` — validar sesion Supabase real en vez de cookie mock
+
+## Estructura
+
+```
+app/                    # Next.js App Router
+  layout.tsx            # Root layout
+  page.tsx              # Landing con redirect segun auth
+  login/                # Form login mock
+  signup/               # Form signup mock
+  onboarding/           # 2 pasos: rol + subtipo vehiculo
+  app/
+    layout.tsx          # Auth guard + NavBar
+    pasajero/           # Mapa con conductores activos
+    conductor/
+      bus/              # Pantalla bus y microbus (turno + path + paradas)
+      taxi/             # Pantalla taxi (disponibilidad + ride requests)
+    settings/           # Info perfil + borrar perfil
+components/
+  map/                  # MapView, DriverMarker, RoutePath, StopMarker
+  ui/                   # Button, Toast, RoleCard, BottomSheet
+  conductor/            # StartShiftButton, RegisterStopButton, RideRequestPopup
+hooks/                  # useGeolocation, useDriverShift, useRideRequests
+lib/
+  types.ts              # Tipos TypeScript del dominio
+  constants.ts          # SIGUA_CENTER, radios, intervalos
+  supabase.ts           # Browser client singleton
+  supabase-server.ts    # Server client con cookies
+  mocks/
+    auth.ts             # Mock de auth (cookie-based)
+    data.ts             # Datos mock: 3 conductores, 1 ruta
+proxy.ts                # Middleware de auth (Next.js 16)
+```
