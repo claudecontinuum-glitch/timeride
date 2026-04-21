@@ -1,11 +1,12 @@
 "use client"
 
-import { useCallback } from "react"
+import { useCallback, useEffect } from "react"
 import dynamic from "next/dynamic"
 import { useGeolocation } from "@/hooks/useGeolocation"
 import { useRideRequests } from "@/hooks/useRideRequests"
 import { useAuth } from "@/lib/mocks/auth"
 import { useToast } from "@/components/ui/Toast"
+import { getSupabaseBrowser } from "@/lib/supabase"
 import { RideRequestPopup } from "@/components/conductor/RideRequestPopup"
 import { SIGUA_CENTER } from "@/lib/constants"
 import { Marker, Polyline } from "react-leaflet"
@@ -44,12 +45,7 @@ function PickupMarker({ lat, lng }: { lat: number; lng: number }) {
   return <Marker position={[lat, lng]} icon={icon} />
 }
 
-function haversineMeters(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000
   const dLat = ((lat2 - lat1) * Math.PI) / 180
   const dLng = ((lng2 - lng1) * Math.PI) / 180
@@ -68,10 +64,71 @@ export default function ConductorTaxiPage() {
   const { available, setAvailable, currentRequest, acceptRequest, rejectRequest } =
     useRideRequests(position)
 
+  // Actualizar driver_locations en Supabase cuando la posición cambia y está disponible
+  useEffect(() => {
+    if (!available || !user || !position) return
+
+    const supabase = getSupabaseBrowser()
+
+    const updateLocation = async () => {
+      try {
+        await supabase.from("driver_locations").upsert({
+          driver_id: user.id,
+          lat: position.lat,
+          lng: position.lng,
+          heading: position.heading ?? null,
+          speed_kmh: position.speed ?? null,
+          status: "active",
+          updated_at: new Date().toISOString(),
+        })
+      } catch (err) {
+        console.error("Failed to update taxi driver_location", err)
+      }
+    }
+
+    updateLocation()
+  }, [position, available, user])
+
+  // Marcar offline al desactivar disponibilidad
+  useEffect(() => {
+    if (available || !user) return
+
+    const supabase = getSupabaseBrowser()
+
+    const markOffline = async () => {
+      try {
+        await supabase
+          .from("driver_locations")
+          .update({ status: "offline", updated_at: new Date().toISOString() })
+          .eq("driver_id", user.id)
+      } catch (err) {
+        console.error("Failed to mark taxi offline", err)
+      }
+    }
+
+    markOffline()
+  }, [available, user])
+
+  // Marcar offline al desmontar
+  useEffect(() => {
+    return () => {
+      if (!user) return
+      const supabase = getSupabaseBrowser()
+      supabase
+        .from("driver_locations")
+        .update({ status: "offline", updated_at: new Date().toISOString() })
+        .eq("driver_id", user.id)
+        .then((result: { error: unknown }) => {
+          if (result.error) console.error("Failed to mark taxi offline on unmount", result.error)
+        })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const handleAccept = useCallback(
-    (id: string) => {
+    async (id: string) => {
       const taxistaId = user?.id ?? "unknown"
-      acceptRequest(id, taxistaId)
+      await acceptRequest(id, taxistaId)
       addToast("Ride aceptado. Ve al punto de recogida.", "success")
     },
     [acceptRequest, addToast, user]

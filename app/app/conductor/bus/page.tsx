@@ -4,6 +4,7 @@ import { useEffect, useCallback } from "react"
 import dynamic from "next/dynamic"
 import { useGeolocation } from "@/hooks/useGeolocation"
 import { useDriverShift } from "@/hooks/useDriverShift"
+import { useAuth } from "@/lib/mocks/auth"
 import { useToast } from "@/components/ui/Toast"
 import { StartShiftButton } from "@/components/conductor/StartShiftButton"
 import { RegisterStopButton } from "@/components/conductor/RegisterStopButton"
@@ -53,34 +54,47 @@ export default function ConductorBusPage() {
   const { position, error: geoError, loading: geoLoading, startWatching, stopWatching } =
     useGeolocation({ fallbackToCenter: true })
   const { addToast } = useToast()
+  const { user, profile } = useAuth()
   const shift = useDriverShift()
 
-  // Cuando la posicion cambia y hay turno activo, actualizar en el hook
+  // Cuando la posición cambia y hay turno activo, actualizar en el hook
   useEffect(() => {
     if (position && shift.status === "active") {
-      shift.updatePosition({ lat: position.lat, lng: position.lng })
+      shift.updatePosition({
+        lat: position.lat,
+        lng: position.lng,
+        heading: position.heading,
+        speed: position.speed,
+      })
     }
   }, [position, shift])
 
-  const handleStartShift = useCallback(() => {
+  const handleStartShift = useCallback(async () => {
+    if (!user || !profile) return
+
     const pos = position ?? SIGUA_CENTER
     startWatching()
-    shift.startShift({ lat: pos.lat, lng: pos.lng })
-    addToast("Turno iniciado. Tu ruta se está grabando.", "success")
-  }, [position, startWatching, shift, addToast])
 
-  const handleStopShift = useCallback(() => {
+    await shift.startShift(
+      { lat: pos.lat, lng: pos.lng },
+      user.id,
+      profile.vehicle_type ?? "bus"
+    )
+    addToast("Turno iniciado. Tu ruta se está grabando.", "success")
+  }, [position, startWatching, shift, addToast, user, profile])
+
+  const handleStopShift = useCallback(async () => {
     stopWatching()
-    shift.stopShift()
+    await shift.stopShift()
     addToast("Turno finalizado. Ruta guardada.", "info")
   }, [stopWatching, shift, addToast])
 
-  const handleRegisterStop = useCallback(() => {
+  const handleRegisterStop = useCallback(async () => {
     if (!position) {
       addToast("No se pudo obtener tu ubicación.", "error")
       return
     }
-    shift.registerStop({ lat: position.lat, lng: position.lng })
+    await shift.registerStop({ lat: position.lat, lng: position.lng })
     addToast("Parada registrada.", "success")
   }, [position, shift, addToast])
 

@@ -1,25 +1,21 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import dynamic from "next/dynamic"
 import { useGeolocation } from "@/hooks/useGeolocation"
 import { useToast } from "@/components/ui/Toast"
 import { useAuth } from "@/lib/mocks/auth"
+import { useDriverLocations } from "@/hooks/useDriverLocations"
+import { usePasajeroRideRequest } from "@/hooks/usePasajeroRideRequest"
+import { getSupabaseBrowser } from "@/lib/supabase"
 import { BottomSheet } from "@/components/ui/BottomSheet"
 import { Button } from "@/components/ui/Button"
-import { MOCK_DRIVERS, MOCK_ROUTE } from "@/lib/mocks/data"
-import {
-  createRideRequest,
-  getActiveRequestForPasajero,
-  cancelRideRequest,
-  RIDE_REQUESTS_KEY,
-} from "@/lib/mocks/rideRequests"
-import type { DriverLocation, VehicleType, RideRequest } from "@/lib/types"
+import type { DriverLocation, VehicleType, Route } from "@/lib/types"
 import { Marker } from "react-leaflet"
 import L from "leaflet"
 import { SIGUA_CENTER } from "@/lib/constants"
 
-// Dynamic import para evitar SSR de Leaflet
+// Dynamic imports para evitar SSR de Leaflet
 const MapView = dynamic(() => import("@/components/map/MapView"), {
   ssr: false,
   loading: () => (
@@ -72,8 +68,16 @@ export default function PasajeroPage() {
   const { addToast } = useToast()
   const { user, profile } = useAuth()
 
-  // TODO Supabase: reemplazar MOCK_DRIVERS con useDriverLocations() hook
-  const [drivers] = useState<DriverLocation[]>(MOCK_DRIVERS)
+  // Conductores activos via Supabase Realtime
+  const { drivers, error: driversError } = useDriverLocations(position)
+
+  // Ride requests del pasajero via Supabase
+  const {
+    activeRide,
+    createRideRequest,
+    cancelRideRequest,
+    loading: requestingRide,
+  } = usePasajeroRideRequest(user?.id ?? null)
 
   // Conductor seleccionado — el sheet puede cerrarse pero la ruta queda visible
   const [selectedDriver, setSelectedDriver] = useState<DriverLocation | null>(null)
@@ -81,43 +85,87 @@ export default function PasajeroPage() {
 
   // Confirmación de pedir ride (segundo sheet)
   const [rideConfirmOpen, setRideConfirmOpen] = useState(false)
-  const [requestingRide, setRequestingRide] = useState(false)
 
-  // Estado del ride activo del pasajero
-  const [activeRide, setActiveRide] = useState<RideRequest | null>(null)
-
-  // Cargar ride activo al montar y escuchar cambios
-  useEffect(() => {
-    if (!user) return
-
-    const refresh = () => {
-      const ride = getActiveRequestForPasajero(user.id)
-      setActiveRide(ride)
-    }
-
-    refresh()
-
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === RIDE_REQUESTS_KEY) refresh()
-    }
-
-    window.addEventListener("storage", handleStorage)
-    return () => window.removeEventListener("storage", handleStorage)
-  }, [user])
+  // Ruta del conductor seleccionado
+  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null)
+  const prevStatusRef = useRef<string | undefined>(undefined)
 
   // Notificar al pasajero cuando su ride es aceptado
   useEffect(() => {
-    if (activeRide?.status === "accepted") {
-      addToast("¡Un taxi viene en camino! 🚕", "success")
+    if (activeRide?.status === "accepted" && prevStatusRef.current !== "accepted") {
+      addToast("¡Un taxi viene en camino!", "success")
     }
-  // Solo cuando cambia a accepted
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeRide?.status])
+    prevStatusRef.current = activeRide?.status
+  }, [activeRide?.status, addToast])
+
+  // Toast si hay error cargando conductores (Supabase offline)
+  useEffect(() => {
+    if (driversError) {
+      addToast("Sin conexión. Reintentando...", "error")
+    }
+  }, [driversError, addToast])
+
+  // Cargar ruta del conductor seleccionado (microbus/bus)
+  const fetchDriverRoute = useCallback(async (driverId: string) => {
+    const supabase = getSupabaseBrowser()
+
+    try {
+      // Buscar ruta activa del conductor
+      const { data: routeData, error: routeError } = await supabase
+        .from("routes")
+        .select("id, driver_id, nombre, color, started_at, ended_at")
+        .eq("driver_id", driverId)
+        .is("ended_at", null)
+        .single()
+
+      if (routeError || !routeData) {
+        setSelectedRoute(null)
+        return
+      }
+
+      // Cargar path y paradas en paralelo
+      const [pathResult, stopsResult] = await Promise.all([
+        supabase
+          .from("route_paths")
+          .select("id, route_id, lat, lng, seq, recorded_at")
+          .eq("route_id", routeData.id)
+          .order("seq"),
+        supabase
+          .from("route_stops")
+          .select("id, route_id, lat, lng, nombre_opcional, seq, recorded_at")
+          .eq("route_id", routeData.id)
+          .order("seq"),
+      ])
+
+      if (pathResult.error) {
+        console.error("Failed to fetch route_paths", pathResult.error)
+      }
+      if (stopsResult.error) {
+        console.error("Failed to fetch route_stops", stopsResult.error)
+      }
+
+      setSelectedRoute({
+        ...routeData,
+        path: pathResult.data ?? [],
+        stops: stopsResult.data ?? [],
+      })
+    } catch (err) {
+      console.error("Failed to fetch driver route", err)
+      setSelectedRoute(null)
+    }
+  }, [])
 
   const handleDriverClick = useCallback((driver: DriverLocation) => {
     setSelectedDriver(driver)
     setSheetOpen(true)
-  }, [])
+
+    // Cargar ruta si es microbus/bus
+    if (driver.profile?.vehicle_type && driver.profile.vehicle_type !== "taxi") {
+      fetchDriverRoute(driver.driver_id)
+    } else {
+      setSelectedRoute(null)
+    }
+  }, [fetchDriverRoute])
 
   const handleCloseSheet = useCallback(() => {
     setSheetOpen(false)
@@ -126,53 +174,37 @@ export default function PasajeroPage() {
 
   const handleClearRoute = useCallback(() => {
     setSelectedDriver(null)
+    setSelectedRoute(null)
     setSheetOpen(false)
   }, [])
 
   const handleRequestRide = useCallback(async () => {
     if (!user || !profile) return
-    setRequestingRide(true)
 
-    try {
-      // TODO Supabase: await supabase.from("ride_requests").insert({...})
-      const lat = position?.lat ?? SIGUA_CENTER.lat
-      const lng = position?.lng ?? SIGUA_CENTER.lng
+    const lat = position?.lat ?? SIGUA_CENTER.lat
+    const lng = position?.lng ?? SIGUA_CENTER.lng
 
-      const ride = createRideRequest(
-        user.id,
-        profile.nombre,
-        profile.telefono,
-        lat,
-        lng
-      )
+    const ride = await createRideRequest(lat, lng)
 
-      setActiveRide(ride)
-      setRideConfirmOpen(false)
-      setSheetOpen(false)
-      addToast("Solicitud enviada. Esperando conductor...", "success")
-    } catch (err) {
-      console.error("Failed to create ride request", err)
+    if (!ride) {
       addToast("No se pudo enviar la solicitud. Intenta de nuevo.", "error")
-    } finally {
-      setRequestingRide(false)
+      return
     }
-  }, [user, profile, position, addToast])
 
-  const handleCancelRide = useCallback(() => {
+    setRideConfirmOpen(false)
+    setSheetOpen(false)
+    addToast("Solicitud enviada. Esperando conductor...", "success")
+  }, [user, profile, position, createRideRequest, addToast])
+
+  const handleCancelRide = useCallback(async () => {
     if (!activeRide) return
-    // TODO Supabase: UPDATE ride_requests SET status=cancelled WHERE id=activeRide.id
-    cancelRideRequest(activeRide.id)
-    setActiveRide(null)
+    await cancelRideRequest(activeRide.id)
     addToast("Solicitud cancelada.", "info")
-  }, [activeRide, addToast])
+  }, [activeRide, cancelRideRequest, addToast])
 
   const mapCenter = position
     ? { lat: position.lat, lng: position.lng }
     : SIGUA_CENTER
-
-  // Mostrar ruta del conductor seleccionado (incluso con sheet cerrado)
-  const selectedRoute =
-    selectedDriver?.driver_id === MOCK_ROUTE.driver_id ? MOCK_ROUTE : null
 
   const sheetTitle = selectedDriver?.profile
     ? `${VEHICLE_LABEL[selectedDriver.profile.vehicle_type ?? "taxi"]} — ${selectedDriver.profile.nombre}`
@@ -200,14 +232,14 @@ export default function PasajeroPage() {
         {/* Conductores activos */}
         {drivers.map((driver) => (
           <DriverMarker
-            key={driver.id}
+            key={driver.driver_id}
             driver={driver}
             onClick={handleDriverClick}
           />
         ))}
 
         {/* Ruta del conductor seleccionado — persiste aunque el sheet esté cerrado */}
-        {selectedRoute?.path && (
+        {selectedRoute?.path && selectedRoute.path.length >= 2 && (
           <RoutePath
             points={selectedRoute.path.map((p) => ({ lat: p.lat, lng: p.lng }))}
             color={selectedRoute.color}
@@ -240,7 +272,7 @@ export default function PasajeroPage() {
       )}
 
       {/* Mensaje sin conductores */}
-      {drivers.length === 0 && (
+      {drivers.length === 0 && !driversError && (
         <div className="absolute top-4 left-4 right-4 z-[1000]">
           <div className="bg-surface rounded-2xl shadow-md px-4 py-4 text-center border border-border">
             <span className="text-2xl" aria-hidden="true">🔍</span>
