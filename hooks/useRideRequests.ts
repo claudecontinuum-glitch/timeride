@@ -2,33 +2,60 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import type { RideRequest } from "@/lib/types"
-import { MOCK_RIDE_REQUEST } from "@/lib/mocks/data"
-
-const MOCK_REQUEST_INTERVAL_MS = 30000
+import {
+  RIDE_REQUESTS_KEY,
+  getRideRequests,
+  acceptRideRequest,
+  getPendingRequestsNearDriver,
+} from "@/lib/mocks/rideRequests"
+import { SIGUA_CENTER, DEFAULT_RADIUS_M } from "@/lib/constants"
 
 interface UseRideRequestsReturn {
   available: boolean
   setAvailable: (v: boolean) => void
   currentRequest: RideRequest | null
-  acceptRequest: (id: string) => void
+  acceptRequest: (id: string, taxistaId: string) => void
   rejectRequest: (id: string) => void
 }
 
 /**
  * Hook de ride requests para taxista.
- * Mock: genera un ride_request simulado cada 30 seg cuando available=true.
- * TODO Supabase: reemplazar setInterval por supabase.channel("ride_requests")
- * .on("postgres_changes", ...) para recibir requests en realtime.
+ * Lee de localStorage y escucha storage events para recibir requests en tiempo real
+ * desde otra pestaña (donde el pasajero creó el request).
+ * TODO Supabase: reemplazar por supabase.channel("ride_requests").on("postgres_changes")
  */
-export function useRideRequests(): UseRideRequestsReturn {
+export function useRideRequests(
+  driverPosition?: { lat: number; lng: number } | null
+): UseRideRequestsReturn {
   const [available, setAvailableState] = useState(false)
   const [currentRequest, setCurrentRequest] = useState<RideRequest | null>(null)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const currentRequestRef = useRef<RideRequest | null>(null)
+  const positionRef = useRef(driverPosition ?? SIGUA_CENTER)
 
-  const stopSimulation = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
+  // Mantener ref sincronizada
+  useEffect(() => {
+    if (driverPosition) {
+      positionRef.current = driverPosition
+    }
+  }, [driverPosition])
+
+  useEffect(() => {
+    currentRequestRef.current = currentRequest
+  }, [currentRequest])
+
+  const checkForNewRequests = useCallback(() => {
+    // Si ya tenemos un request activo no buscar más
+    if (currentRequestRef.current) return
+
+    const { lat, lng } = positionRef.current
+    const pending = getPendingRequestsNearDriver(lat, lng, DEFAULT_RADIUS_M)
+
+    if (pending.length > 0) {
+      const newest = pending.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )[0]
+      setCurrentRequest(newest)
+      currentRequestRef.current = newest
     }
   }, [])
 
@@ -36,45 +63,56 @@ export function useRideRequests(): UseRideRequestsReturn {
     (v: boolean) => {
       setAvailableState(v)
       if (!v) {
-        stopSimulation()
         setCurrentRequest(null)
+        currentRequestRef.current = null
+      } else {
+        // Revisar inmediatamente si hay requests
+        checkForNewRequests()
       }
     },
-    [stopSimulation]
+    [checkForNewRequests]
   )
 
   useEffect(() => {
     if (!available) return
 
-    // TODO Supabase: suscribir a ride_requests WHERE status=pending
-    // y filtrar por distancia al conductor
-    intervalRef.current = setInterval(() => {
-      // Solo mostrar nueva request si no hay una pendiente
-      setCurrentRequest((prev) => {
-        if (prev) return prev
-        const mockRequest: RideRequest = {
-          ...MOCK_RIDE_REQUEST,
-          id: `rr-${Date.now()}`,
-          created_at: new Date().toISOString(),
-        }
-        console.log("Mock realtime: new ride_request", mockRequest)
-        return mockRequest
-      })
-    }, MOCK_REQUEST_INTERVAL_MS)
+    // Revisar al montar
+    checkForNewRequests()
 
-    return () => stopSimulation()
-  }, [available, stopSimulation])
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key !== RIDE_REQUESTS_KEY) return
+      checkForNewRequests()
+    }
 
-  const acceptRequest = useCallback((id: string) => {
+    window.addEventListener("storage", handleStorage)
+    return () => window.removeEventListener("storage", handleStorage)
+  }, [available, checkForNewRequests])
+
+  // Re-verificar periódicamente por si el storage event no llegó
+  useEffect(() => {
+    if (!available) return
+    const interval = setInterval(checkForNewRequests, 5000)
+    return () => clearInterval(interval)
+  }, [available, checkForNewRequests])
+
+  const acceptRequest = useCallback((id: string, taxistaId: string) => {
     // TODO Supabase: UPDATE ride_requests SET status=accepted, accepted_by=user.id WHERE id=id
-    console.log("Mock UPDATE ride_requests accepted", id)
-    setCurrentRequest(null)
+    acceptRideRequest(id, taxistaId)
+    // Mantener visible en la pantalla del taxista para que vea la ruta
+    // (solo limpiamos el popup de "nueva request")
+    const requests = getRideRequests()
+    const accepted = requests.find((r) => r.id === id)
+    if (accepted) {
+      setCurrentRequest({ ...accepted })
+    }
   }, [])
 
-  const rejectRequest = useCallback((id: string) => {
-    // TODO Supabase: UPDATE ride_requests SET status=cancelled WHERE id=id
-    console.log("Mock UPDATE ride_requests rejected", id)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const rejectRequest = useCallback((_id: string) => {
+    // TODO Supabase: UPDATE ride_requests SET status=cancelled WHERE id=_id
+    // Por ahora solo lo ignoramos localmente (no eliminamos para que otros taxistas puedan verlo)
     setCurrentRequest(null)
+    currentRequestRef.current = null
   }, [])
 
   return {

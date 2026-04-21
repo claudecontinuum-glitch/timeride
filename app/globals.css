@@ -24,6 +24,10 @@
   --color-danger: oklch(0.55 0.22 28);
   --color-danger-foreground: oklch(0.99 0 0);
 
+  /* Éxito */
+  --color-success: oklch(0.55 0.17 155);
+  --color-success-foreground: oklch(0.99 0 0);
+
   /* Acentos por tipo de vehiculo */
   --color-vehicle-taxi: oklch(0.78 0.17 85);       /* amber */
   --color-vehicle-microbus: oklch(0.6 0.17 160);   /* emerald */
@@ -37,6 +41,26 @@
   --radius-sm: 0.5rem;
   --radius-xl: 1rem;
   --radius-2xl: 1.25rem;
+
+  /* Animaciones */
+  --animate-slide-up: slide-up 0.25s ease-out;
+  --animate-fade-in: fade-in 0.2s ease-out;
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 :root {
@@ -66,7 +90,16 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-/* El mapa necesita height explicita */
+/* El mapa necesita height explícita y z-index controlado */
 .leaflet-container {
   z-index: 10;
+}
+
+/* El bottom-sheet de detalle debe quedar sobre el mapa */
+.leaflet-pane {
+  z-index: 10;
+}
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 20;
 }

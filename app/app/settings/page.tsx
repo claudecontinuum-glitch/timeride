@@ -2,12 +2,12 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth, clearMockSession } from "@/lib/mocks/auth"
+import { useAuth, deleteUserById, clearMockSession } from "@/lib/mocks/auth"
 import { Button } from "@/components/ui/Button"
 
 const VEHICLE_LABEL: Record<string, string> = {
   taxi: "Taxi",
-  microbus: "Microbus",
+  microbus: "Microbús",
   bus: "Bus",
 }
 
@@ -23,15 +23,16 @@ export default function SettingsPage() {
 
     try {
       // TODO Supabase: await supabase.from("profiles").delete().eq("user_id", user.id)
-      // y luego supabase.auth.signOut()
-      await new Promise((r) => setTimeout(r, 500))
+      // y supabase.auth.signOut()
+      await new Promise((r) => setTimeout(r, 400))
 
-      localStorage.removeItem(`timeride_profile_${user.id}`)
+      // Eliminar el usuario completo del array (libera el email para re-registro)
+      deleteUserById(user.id)
       clearMockSession()
 
-      console.log("Mock: profile deleted for user", user.id)
+      console.log("Mock: user deleted", user.id)
 
-      router.push("/signup")
+      router.replace("/signup")
     } finally {
       setDeleting(false)
     }
@@ -47,9 +48,7 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col min-h-full px-4 py-6 bg-background">
       <div className="max-w-sm mx-auto w-full">
-        <h1 className="text-xl font-bold text-foreground mb-6">
-          Configuracion
-        </h1>
+        <h1 className="text-xl font-bold text-foreground mb-6">Configuración</h1>
 
         {/* Info de perfil */}
         <section
@@ -58,7 +57,7 @@ export default function SettingsPage() {
         >
           <h2
             id="profile-section"
-            className="text-sm font-semibold text-muted-foreground uppercase tracking-wide"
+            className="text-xs font-semibold text-muted-foreground uppercase tracking-wide"
           >
             Tu perfil
           </h2>
@@ -66,7 +65,10 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <ProfileRow label="Nombre" value={profile?.nombre ?? "—"} />
             <ProfileRow label="Correo" value={user?.email ?? "—"} />
-            <ProfileRow label="Telefono" value={profile?.telefono ?? "No configurado"} />
+            <ProfileRow
+              label="Teléfono"
+              value={profile?.telefono ?? "No configurado"}
+            />
             <ProfileRow label="Rol" value={rolDisplay} />
           </div>
         </section>
@@ -78,14 +80,15 @@ export default function SettingsPage() {
         >
           <h2
             id="danger-section"
-            className="text-sm font-semibold text-danger uppercase tracking-wide mb-3"
+            className="text-xs font-semibold text-danger uppercase tracking-wide mb-3"
           >
             Zona de peligro
           </h2>
 
           <p className="text-sm text-muted-foreground mb-4">
-            Borrar tu perfil elimina tu rol y toda tu informacion. Para cambiar
-            de rol, esta es la unica opcion. Esta accion no se puede deshacer.
+            Borrar tu perfil elimina tu cuenta completa, incluyendo tu rol y
+            toda tu información. Para cambiar de rol, esta es la única opción.
+            Esta acción no se puede deshacer.
           </p>
 
           {!confirming ? (
@@ -100,7 +103,7 @@ export default function SettingsPage() {
           ) : (
             <div className="space-y-3">
               <p className="text-sm font-medium text-foreground text-center">
-                Estas seguro? Esta accion no se puede deshacer.
+                ¿Estás seguro? Esta acción no se puede deshacer.
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <Button
@@ -116,7 +119,7 @@ export default function SettingsPage() {
                   loading={deleting}
                   onClick={handleDeleteProfile}
                 >
-                  Si, borrar
+                  Sí, borrar
                 </Button>
               </div>
             </div>
@@ -129,9 +132,11 @@ export default function SettingsPage() {
 
 function ProfileRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between py-1 border-b border-border last:border-0">
+    <div className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
       <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium text-foreground">{value}</span>
+      <span className="text-sm font-medium text-foreground truncate max-w-[160px] text-right">
+        {value}
+      </span>
     </div>
   )
 }

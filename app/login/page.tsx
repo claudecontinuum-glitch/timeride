@@ -2,13 +2,12 @@
 
 import { useState, FormEvent, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { setMockSession } from "@/lib/mocks/auth"
+import { signIn } from "@/lib/mocks/auth"
 import { Button } from "@/components/ui/Button"
 
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams.get("redirect") ?? "/"
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -28,34 +27,37 @@ function LoginForm() {
 
     try {
       // TODO Supabase: reemplazar por supabase.auth.signInWithPassword({ email, password })
-      // y manejar el cookie de sesion real.
-      // Por ahora: crear un mock user con el email ingresado.
-      // El profile queda null — la page raiz redirigira a /onboarding si no hay profile.
-      await new Promise((r) => setTimeout(r, 400)) // simular latencia de red
+      const result = signIn(email.trim(), password)
 
-      const mockUser = {
-        id: `user-${email.replace(/[^a-z0-9]/gi, "-")}`,
-        email,
+      if (!result.success) {
+        setError(result.error ?? "No se pudo iniciar sesión.")
+        return
       }
 
-      // Intentar recuperar un profile mock guardado en localStorage para persistencia
-      let profile = null
-      try {
-        const stored = localStorage.getItem(`timeride_profile_${mockUser.id}`)
-        if (stored) profile = JSON.parse(stored)
-      } catch {
-        // localStorage no disponible — normal en algunos contextos
+      // Redirigir directo al rol correcto — sin pasar por /
+      const profile = result.profile
+      if (!profile) {
+        router.replace("/onboarding")
+        return
       }
 
-      setMockSession(mockUser, profile)
-      router.push(redirect)
+      if (profile.role === "pasajero") {
+        router.replace("/app/pasajero")
+      } else if (profile.vehicle_type === "taxi") {
+        router.replace("/app/conductor/taxi")
+      } else {
+        router.replace("/app/conductor/bus")
+      }
     } catch (err) {
       console.error("Login failed", err)
-      setError("No se pudo iniciar sesion. Intenta de nuevo.")
+      setError("No se pudo iniciar sesión. Intenta de nuevo.")
     } finally {
       setLoading(false)
     }
   }
+
+  // Suprimir advertencia de "redirect" param no usado cuando no viene en URL
+  void searchParams
 
   return (
     <div className="flex min-h-full flex-col items-center justify-center px-4 bg-background">
@@ -76,9 +78,9 @@ function LoginForm() {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-foreground mb-1"
+              className="block text-sm font-medium text-foreground mb-1.5"
             >
-              Correo electronico
+              Correo electrónico
             </label>
             <input
               id="email"
@@ -87,7 +89,7 @@ function LoginForm() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-3 text-foreground
+              className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-foreground
                          placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50
                          transition-colors text-base"
               placeholder="tu@correo.com"
@@ -97,9 +99,9 @@ function LoginForm() {
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-foreground mb-1"
+              className="block text-sm font-medium text-foreground mb-1.5"
             >
-              Contrasena
+              Contraseña
             </label>
             <input
               id="password"
@@ -108,7 +110,7 @@ function LoginForm() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-3 text-foreground
+              className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-foreground
                          placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50
                          transition-colors text-base"
               placeholder="••••••••"
@@ -116,7 +118,7 @@ function LoginForm() {
           </div>
 
           {error && (
-            <p role="alert" className="text-sm text-danger">
+            <p role="alert" className="text-sm text-danger bg-danger/5 rounded-xl px-4 py-2.5">
               {error}
             </p>
           )}
@@ -132,12 +134,12 @@ function LoginForm() {
         </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          No tienes cuenta?{" "}
+          ¿No tienes cuenta?{" "}
           <a
             href="/signup"
             className="text-primary font-medium hover:underline"
           >
-            Registrate
+            Regístrate
           </a>
         </p>
       </div>

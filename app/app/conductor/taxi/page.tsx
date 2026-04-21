@@ -4,6 +4,7 @@ import { useCallback } from "react"
 import dynamic from "next/dynamic"
 import { useGeolocation } from "@/hooks/useGeolocation"
 import { useRideRequests } from "@/hooks/useRideRequests"
+import { useAuth } from "@/lib/mocks/auth"
 import { useToast } from "@/components/ui/Toast"
 import { RideRequestPopup } from "@/components/conductor/RideRequestPopup"
 import { SIGUA_CENTER } from "@/lib/constants"
@@ -15,7 +16,10 @@ const MapView = dynamic(() => import("@/components/map/MapView"), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center bg-surface-hover">
-      <p className="text-muted-foreground text-sm">Cargando mapa...</p>
+      <div className="flex flex-col items-center gap-2">
+        <span className="text-2xl animate-pulse" aria-hidden="true">🗺️</span>
+        <p className="text-muted-foreground text-sm">Cargando mapa...</p>
+      </div>
     </div>
   ),
 })
@@ -58,23 +62,25 @@ function haversineMeters(
 }
 
 export default function ConductorTaxiPage() {
-  const { position } = useGeolocation({ fallbackToCenter: true })
+  const { position, error: geoError } = useGeolocation({ fallbackToCenter: true })
+  const { user } = useAuth()
   const { addToast } = useToast()
   const { available, setAvailable, currentRequest, acceptRequest, rejectRequest } =
-    useRideRequests()
+    useRideRequests(position)
 
   const handleAccept = useCallback(
     (id: string) => {
-      acceptRequest(id)
+      const taxistaId = user?.id ?? "unknown"
+      acceptRequest(id, taxistaId)
       addToast("Ride aceptado. Ve al punto de recogida.", "success")
     },
-    [acceptRequest, addToast]
+    [acceptRequest, addToast, user]
   )
 
   const handleReject = useCallback(
     (id: string) => {
       rejectRequest(id)
-      addToast("Request rechazada.", "info")
+      addToast("Solicitud rechazada.", "info")
     },
     [rejectRequest, addToast]
   )
@@ -91,14 +97,16 @@ export default function ConductorTaxiPage() {
         )
       : 0
 
-  // Linea del taxi al pickup cuando se acepta
+  // Línea del taxi al pickup cuando hay request activa
   const routeToPickup: LatLngExpression[] | null =
-    currentRequest && position && available
+    currentRequest && position
       ? [
           [position.lat, position.lng],
           [currentRequest.pickup_lat, currentRequest.pickup_lng],
         ]
       : null
+
+  const isRequestAccepted = currentRequest?.status === "accepted"
 
   return (
     <div className="flex flex-col h-full">
@@ -108,9 +116,11 @@ export default function ConductorTaxiPage() {
           <p className="text-sm font-semibold text-foreground">
             {available ? "Disponible para rides" : "No disponible"}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground mt-0.5">
             {available
-              ? "Esperando solicitudes cercanas..."
+              ? isRequestAccepted
+                ? "Ve al punto de recogida"
+                : "Esperando solicitudes cercanas..."
               : "Activa para recibir rides"}
           </p>
         </div>
@@ -136,13 +146,23 @@ export default function ConductorTaxiPage() {
         </button>
       </div>
 
+      {/* Error de geolocation */}
+      {geoError && (
+        <div className="px-4 py-2 bg-surface border-b border-border">
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <span aria-hidden="true">📍</span>
+            Ubicación no disponible. Mapa centrado en Siguatepeque.
+          </p>
+        </div>
+      )}
+
       {/* Mapa */}
       <div className="flex-1 relative">
         <MapView center={mapCenter}>
           {/* Mi posicion */}
           {position && <MyMarker lat={position.lat} lng={position.lng} />}
 
-          {/* Marcador del pickup aceptado */}
+          {/* Marcador del pickup */}
           {routeToPickup && currentRequest && (
             <>
               <PickupMarker
@@ -160,15 +180,26 @@ export default function ConductorTaxiPage() {
         {/* Estado sin disponibilidad */}
         {!available && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-            <div className="bg-surface/90 rounded-2xl px-5 py-4 shadow text-center mx-4">
+            <div className="bg-surface/95 rounded-2xl px-5 py-5 shadow-lg text-center mx-6 border border-border">
               <span className="text-3xl" aria-hidden="true">
                 🟡
               </span>
-              <p className="mt-2 text-sm font-medium text-foreground">
-                No estas disponible
+              <p className="mt-2 text-sm font-semibold text-foreground">
+                No estás disponible
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Activa el toggle para recibir solicitudes
+              <p className="text-xs text-muted-foreground mt-1 max-w-[200px] mx-auto">
+                Activa el toggle de arriba para aparecer en el mapa de los pasajeros y recibir solicitudes.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Estado disponible pero sin requests */}
+        {available && !currentRequest && (
+          <div className="absolute top-3 left-4 right-4 pointer-events-none z-20">
+            <div className="bg-surface/90 rounded-xl px-4 py-2.5 shadow text-center border border-border">
+              <p className="text-xs text-muted-foreground">
+                <span aria-hidden="true">👁️</span> Visible para pasajeros cercanos
               </p>
             </div>
           </div>
@@ -176,13 +207,32 @@ export default function ConductorTaxiPage() {
       </div>
 
       {/* Popup de ride request */}
-      {currentRequest && (
+      {currentRequest && currentRequest.status === "pending" && (
         <RideRequestPopup
           request={currentRequest}
           distanceMeters={distanceToPickup}
           onAccept={handleAccept}
           onReject={handleReject}
         />
+      )}
+
+      {/* Card de ride aceptado */}
+      {currentRequest && isRequestAccepted && (
+        <div className="bg-success/10 border-t-2 border-success px-4 py-3 flex items-center gap-3">
+          <span className="text-xl" aria-hidden="true">🚕</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-foreground">
+              Ve al punto de recogida
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {currentRequest.pasajero?.nombre ?? "Pasajero"} te está esperando · {
+                distanceToPickup < 1000
+                  ? `${Math.round(distanceToPickup)} m`
+                  : `${(distanceToPickup / 1000).toFixed(1)} km`
+              }
+            </p>
+          </div>
+        </div>
       )}
     </div>
   )

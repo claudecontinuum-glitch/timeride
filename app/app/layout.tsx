@@ -3,20 +3,15 @@
 import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
-import { useAuth, clearMockSession } from "@/lib/mocks/auth"
+import { useAuth, signOut } from "@/lib/mocks/auth"
 
 function NavBar() {
   const { user, profile } = useAuth()
   const router = useRouter()
 
   function handleLogout() {
-    clearMockSession()
-    try {
-      localStorage.removeItem(`timeride_profile_${user?.id}`)
-    } catch {
-      // no-op
-    }
-    router.push("/login")
+    signOut()
+    router.replace("/login")
   }
 
   const roleLabel =
@@ -44,18 +39,18 @@ function NavBar() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <Link
           href="/app/settings"
-          className="text-sm text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg hover:bg-surface-hover transition-colors"
-          aria-label="Configuracion"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-xl hover:bg-surface-hover transition-colors"
+          aria-label="Configuración"
         >
           ⚙️
         </Link>
         <button
           onClick={handleLogout}
-          className="text-sm text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg hover:bg-surface-hover transition-colors"
-          aria-label="Cerrar sesion"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-sm text-muted-foreground hover:text-foreground rounded-xl hover:bg-surface-hover transition-colors px-2"
+          aria-label="Cerrar sesión"
         >
           Salir
         </button>

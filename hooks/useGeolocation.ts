@@ -88,8 +88,12 @@ export function useGeolocation({
 
   useEffect(() => {
     if (!navigator.geolocation) {
-      setError("Tu dispositivo no soporta geolocation.")
-      setLoading(false)
+      // Usar queueMicrotask para evitar setState síncrono en useEffect
+      const noGeoError = () => {
+        setError("Tu dispositivo no soporta geolocation.")
+        setLoading(false)
+      }
+      queueMicrotask(noGeoError)
       return
     }
 
@@ -100,9 +104,9 @@ export function useGeolocation({
       timeout: 15000,
     })
 
-    // Si watch=true, arrancamos watchPosition tambien
+    // Si watch=true, arrancamos watchPosition — queueMicrotask para evitar setState síncrono
     if (watch) {
-      startWatching()
+      queueMicrotask(startWatching)
     }
 
     return () => {

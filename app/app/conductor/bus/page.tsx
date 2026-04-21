@@ -15,7 +15,10 @@ const MapView = dynamic(() => import("@/components/map/MapView"), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center bg-surface-hover">
-      <p className="text-muted-foreground text-sm">Cargando mapa...</p>
+      <div className="flex flex-col items-center gap-2">
+        <span className="text-2xl animate-pulse" aria-hidden="true">🗺️</span>
+        <p className="text-muted-foreground text-sm">Cargando mapa...</p>
+      </div>
     </div>
   ),
 })
@@ -47,9 +50,8 @@ function formatTime(date: Date): string {
 }
 
 export default function ConductorBusPage() {
-  const { position, startWatching, stopWatching } = useGeolocation({
-    fallbackToCenter: true,
-  })
+  const { position, error: geoError, loading: geoLoading, startWatching, stopWatching } =
+    useGeolocation({ fallbackToCenter: true })
   const { addToast } = useToast()
   const shift = useDriverShift()
 
@@ -64,7 +66,7 @@ export default function ConductorBusPage() {
     const pos = position ?? SIGUA_CENTER
     startWatching()
     shift.startShift({ lat: pos.lat, lng: pos.lng })
-    addToast("Turno iniciado. Tu ruta se esta grabando.", "success")
+    addToast("Turno iniciado. Tu ruta se está grabando.", "success")
   }, [position, startWatching, shift, addToast])
 
   const handleStopShift = useCallback(() => {
@@ -75,7 +77,7 @@ export default function ConductorBusPage() {
 
   const handleRegisterStop = useCallback(() => {
     if (!position) {
-      addToast("No se pudo obtener tu ubicacion.", "error")
+      addToast("No se pudo obtener tu ubicación.", "error")
       return
     }
     shift.registerStop({ lat: position.lat, lng: position.lng })
@@ -83,14 +85,33 @@ export default function ConductorBusPage() {
   }, [position, shift, addToast])
 
   const mapCenter = position ?? SIGUA_CENTER
+  const noGeolocationSupport = typeof window !== "undefined" && !navigator.geolocation
 
   return (
     <div className="flex flex-col h-full">
       {/* Badge de turno activo */}
       {shift.status === "active" && shift.startedAt && (
         <div className="bg-primary text-primary-foreground px-4 py-2 text-center text-sm font-medium">
-          En turno desde {formatTime(shift.startedAt)} &middot;{" "}
-          {shift.stops.length} paradas registradas
+          En turno desde {formatTime(shift.startedAt)} · {shift.stops.length} parada{shift.stops.length !== 1 ? "s" : ""} registrada{shift.stops.length !== 1 ? "s" : ""}
+        </div>
+      )}
+
+      {/* Error de geolocation */}
+      {!geoLoading && geoError && (
+        <div className="px-4 py-2.5 bg-surface border-b border-border flex items-start gap-2.5">
+          <span className="text-base mt-0.5" aria-hidden="true">📍</span>
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              {noGeolocationSupport
+                ? "Tu navegador no soporta geolocalización"
+                : "Ubicación no disponible"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {noGeolocationSupport
+                ? "Actualiza tu navegador para usar esta función."
+                : "El mapa muestra Siguatepeque. Activa la ubicación en tu navegador para grabar tu ruta real."}
+            </p>
+          </div>
         </div>
       )}
 
@@ -116,6 +137,21 @@ export default function ConductorBusPage() {
             <StopMarker key={stop.id} stop={stop} />
           ))}
         </MapView>
+
+        {/* CTA para conductor sin turno activo */}
+        {shift.status === "idle" && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+            <div className="bg-surface/95 rounded-2xl px-5 py-5 shadow-lg text-center mx-6 border border-border">
+              <span className="text-3xl" aria-hidden="true">🚌</span>
+              <p className="mt-2 text-sm font-semibold text-foreground">
+                Empieza tu turno
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-[200px] mx-auto">
+                Presiona el botón de abajo para aparecer en el mapa de los pasajeros y grabar tu ruta.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Panel de controles inferior */}

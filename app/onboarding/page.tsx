@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth, setMockSession } from "@/lib/mocks/auth"
+import { useAuth, updateUserProfile, setMockSession } from "@/lib/mocks/auth"
 import { RoleCard } from "@/components/ui/RoleCard"
 import { Button } from "@/components/ui/Button"
 import type { Role, VehicleType, Profile } from "@/lib/types"
@@ -40,8 +40,6 @@ export default function OnboardingPage() {
 
     try {
       // TODO Supabase: await supabase.from("profiles").insert({...}) o upsert
-      await new Promise((r) => setTimeout(r, 400))
-
       const newProfile: Profile = {
         id: `profile-${user.id}`,
         user_id: user.id,
@@ -53,21 +51,17 @@ export default function OnboardingPage() {
         created_at: new Date().toISOString(),
       }
 
-      // Guardar en localStorage para persistencia entre recargas (mock)
-      localStorage.setItem(
-        `timeride_profile_${user.id}`,
-        JSON.stringify(newProfile)
-      )
-
+      // Persiste en el array de usuarios + cookie
+      updateUserProfile(user.id, newProfile)
       setMockSession(user, newProfile)
 
       // Redirigir segun rol
       if (selectedRole === "pasajero") {
-        router.push("/app/pasajero")
+        router.replace("/app/pasajero")
       } else if (selectedVehicle === "taxi") {
-        router.push("/app/conductor/taxi")
+        router.replace("/app/conductor/taxi")
       } else {
-        router.push("/app/conductor/bus")
+        router.replace("/app/conductor/bus")
       }
     } finally {
       setSaving(false)
@@ -94,22 +88,19 @@ export default function OnboardingPage() {
             <span className="font-bold text-foreground">TimeRide</span>
           </div>
           <h1 className="text-xl font-bold text-foreground mt-4">
-            {step === "role" ? "Bienvenido. Como vas a usar la app?" : "Que tipo de vehiculo manejas?"}
+            {step === "role"
+              ? "Bienvenido. ¿Cómo vas a usar la app?"
+              : "¿Qué tipo de vehículo manejas?"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {step === "role"
-              ? "Esta decision no se puede cambiar. Para cambiar de rol, debes crear una nueva cuenta."
+              ? "Esta decisión no se puede cambiar. Para cambiar de rol, debes crear una nueva cuenta."
               : "Elige el tipo de transporte que operas."}
           </p>
 
           {/* Progress */}
           <div className="flex gap-2 mt-5" aria-label="Progreso">
-            <div
-              className={[
-                "h-1 flex-1 rounded-full transition-colors",
-                "bg-primary",
-              ].join(" ")}
-            />
+            <div className="h-1 flex-1 rounded-full bg-primary" />
             <div
               className={[
                 "h-1 flex-1 rounded-full transition-colors",
@@ -210,7 +201,7 @@ export default function OnboardingPage() {
                 className="w-full"
                 onClick={() => setStep("role")}
               >
-                Atras
+                Atrás
               </Button>
             </>
           )}

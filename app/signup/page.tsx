@@ -2,7 +2,7 @@
 
 import { useState, FormEvent } from "react"
 import { useRouter } from "next/navigation"
-import { setMockSession } from "@/lib/mocks/auth"
+import { signUp } from "@/lib/mocks/auth"
 import { Button } from "@/components/ui/Button"
 
 export default function SignupPage() {
@@ -23,7 +23,7 @@ export default function SignupPage() {
     }
 
     if (password.length < 6) {
-      setError("La contrasena debe tener al menos 6 caracteres.")
+      setError("La contraseña debe tener al menos 6 caracteres.")
       return
     }
 
@@ -31,24 +31,15 @@ export default function SignupPage() {
 
     try {
       // TODO Supabase: reemplazar por supabase.auth.signUp({ email, password })
-      // Supabase crea el user y devuelve la sesion. Con el user.id, el trigger
-      // de la DB crea automaticamente el profile.
-      await new Promise((r) => setTimeout(r, 500)) // simular latencia
+      const result = signUp(email.trim(), password)
 
-      const mockUser = {
-        id: `user-${Date.now()}`,
-        email,
+      if (!result.success) {
+        setError(result.error ?? "No se pudo crear la cuenta.")
+        return
       }
 
-      // Usuario recien creado — sin profile todavia
-      setMockSession(mockUser, null)
-
-      // Guardar referencia para que login futuro pueda recuperar el profile
-      // (una vez que el usuario complete el onboarding)
-      localStorage.setItem(`timeride_user_${mockUser.id}`, JSON.stringify(mockUser))
-
-      // Redirige a onboarding para que elija su rol
-      router.push("/onboarding")
+      // Usuario recién creado — sin profile, va a onboarding
+      router.replace("/onboarding")
     } catch (err) {
       console.error("Signup failed", err)
       setError("No se pudo crear la cuenta. Intenta de nuevo.")
@@ -66,9 +57,7 @@ export default function SignupPage() {
             🚦
           </span>
           <h1 className="mt-3 text-2xl font-bold text-foreground">TimeRide</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Crea tu cuenta
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Crea tu cuenta</p>
         </div>
 
         {/* Form */}
@@ -76,9 +65,9 @@ export default function SignupPage() {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-foreground mb-1"
+              className="block text-sm font-medium text-foreground mb-1.5"
             >
-              Correo electronico
+              Correo electrónico
             </label>
             <input
               id="email"
@@ -87,7 +76,7 @@ export default function SignupPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-3 text-foreground
+              className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-foreground
                          placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50
                          transition-colors text-base"
               placeholder="tu@correo.com"
@@ -97,9 +86,9 @@ export default function SignupPage() {
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-foreground mb-1"
+              className="block text-sm font-medium text-foreground mb-1.5"
             >
-              Contrasena
+              Contraseña
             </label>
             <input
               id="password"
@@ -108,15 +97,15 @@ export default function SignupPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3 py-3 text-foreground
+              className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-foreground
                          placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50
                          transition-colors text-base"
-              placeholder="Minimo 6 caracteres"
+              placeholder="Mínimo 6 caracteres"
             />
           </div>
 
           {error && (
-            <p role="alert" className="text-sm text-danger">
+            <p role="alert" className="text-sm text-danger bg-danger/5 rounded-xl px-4 py-2.5">
               {error}
             </p>
           )}
@@ -132,12 +121,12 @@ export default function SignupPage() {
         </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Ya tienes cuenta?{" "}
+          ¿Ya tienes cuenta?{" "}
           <a
             href="/login"
             className="text-primary font-medium hover:underline"
           >
-            Inicia sesion
+            Inicia sesión
           </a>
         </p>
       </div>

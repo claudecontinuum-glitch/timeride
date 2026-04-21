@@ -21,14 +21,14 @@ export default function HomePage() {
       return
     }
 
+    // Redirect directo al rol correcto — sin flash
     if (profile.role === "pasajero") {
       router.replace("/app/pasajero")
       return
     }
 
     if (profile.role === "conductor") {
-      const type = profile.vehicle_type
-      if (type === "taxi") {
+      if (profile.vehicle_type === "taxi") {
         router.replace("/app/conductor/taxi")
       } else {
         // bus y microbus usan la misma pantalla
@@ -37,6 +37,7 @@ export default function HomePage() {
     }
   }, [user, profile, loading, router])
 
+  // Spinner mínimo mientras se evalúa la sesión
   return (
     <div className="flex h-full items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-3">

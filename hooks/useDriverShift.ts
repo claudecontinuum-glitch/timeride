@@ -32,7 +32,7 @@ export function useDriverShift(): UseDriverShiftReturn {
   const [stops, setStops] = useState<RouteStop[]>([])
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const currentPositionRef = useRef<{ lat: number; lng: number } | null>(null)
-  const routeIdRef = useRef<string>(`route-${Date.now()}`)
+  const routeIdRef = useRef<string>("route-init")
 
   const updatePosition = useCallback(
     (position: { lat: number; lng: number }) => {
