@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth, updateUserProfile, setMockSession } from "@/lib/mocks/auth"
+import { useAuth, createProfile } from "@/lib/mocks/auth"
 import { RoleCard } from "@/components/ui/RoleCard"
 import { Button } from "@/components/ui/Button"
-import type { Role, VehicleType, Profile } from "@/lib/types"
+import type { Role, VehicleType } from "@/lib/types"
 
 type Step = "role" | "vehicle"
 
@@ -17,6 +17,7 @@ export default function OnboardingPage() {
   const [selectedRole, setSelectedRole] = useState<Role | null>(null)
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType | null>(null)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Si ya tiene profile completo, redirigir
   useEffect(() => {
@@ -37,25 +38,25 @@ export default function OnboardingPage() {
     if (selectedRole === "conductor" && !selectedVehicle) return
 
     setSaving(true)
+    setError(null)
 
     try {
-      // TODO Supabase: await supabase.from("profiles").insert({...}) o upsert
-      const newProfile: Profile = {
-        id: `profile-${user.id}`,
+      const nombre = user.email.split("@")[0]
+
+      const result = await createProfile(user.id, {
         user_id: user.id,
-        nombre: user.email.split("@")[0],
+        nombre,
         telefono: null,
         role: selectedRole,
         vehicle_type: selectedRole === "conductor" ? selectedVehicle : null,
-        role_locked_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
+      })
+
+      if (!result.success) {
+        setError(result.error ?? "No se pudo guardar tu perfil.")
+        return
       }
 
-      // Persiste en el array de usuarios + cookie
-      updateUserProfile(user.id, newProfile)
-      setMockSession(user, newProfile)
-
-      // Redirigir segun rol
+      // Redirigir según rol
       if (selectedRole === "pasajero") {
         router.replace("/app/pasajero")
       } else if (selectedVehicle === "taxi") {
@@ -63,6 +64,9 @@ export default function OnboardingPage() {
       } else {
         router.replace("/app/conductor/bus")
       }
+    } catch (err) {
+      console.error("Failed to create profile", err)
+      setError("No se pudo guardar tu perfil. Intenta de nuevo.")
     } finally {
       setSaving(false)
     }
@@ -130,7 +134,7 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Paso 2: elegir tipo de vehiculo */}
+        {/* Paso 2: elegir tipo de vehículo */}
         {step === "vehicle" && (
           <div className="space-y-3 flex-1">
             <RoleCard
@@ -155,6 +159,12 @@ export default function OnboardingPage() {
               onClick={() => setSelectedVehicle("bus")}
             />
           </div>
+        )}
+
+        {error && (
+          <p role="alert" className="text-sm text-danger bg-danger/5 rounded-xl px-4 py-2.5 mt-4">
+            {error}
+          </p>
         )}
 
         {/* Footer con acciones */}

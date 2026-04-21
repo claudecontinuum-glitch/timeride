@@ -9,8 +9,8 @@ function NavBar() {
   const { user, profile } = useAuth()
   const router = useRouter()
 
-  function handleLogout() {
-    signOut()
+  async function handleLogout() {
+    await signOut()
     router.replace("/login")
   }
 

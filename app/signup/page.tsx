@@ -30,8 +30,7 @@ export default function SignupPage() {
     setLoading(true)
 
     try {
-      // TODO Supabase: reemplazar por supabase.auth.signUp({ email, password })
-      const result = signUp(email.trim(), password)
+      const result = await signUp(email.trim(), password)
 
       if (!result.success) {
         setError(result.error ?? "No se pudo crear la cuenta.")

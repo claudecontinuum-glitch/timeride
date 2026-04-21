@@ -26,18 +26,25 @@ function LoginForm() {
     setLoading(true)
 
     try {
-      // TODO Supabase: reemplazar por supabase.auth.signInWithPassword({ email, password })
-      const result = signIn(email.trim(), password)
+      const result = await signIn(email.trim(), password)
 
       if (!result.success) {
         setError(result.error ?? "No se pudo iniciar sesión.")
         return
       }
 
-      // Redirigir directo al rol correcto — sin pasar por /
       const profile = result.profile
+
+      // Si no hay profile aún, ir a onboarding
       if (!profile) {
         router.replace("/onboarding")
+        return
+      }
+
+      // Redirigir según rol
+      const redirect = searchParams.get("redirect")
+      if (redirect) {
+        router.replace(redirect)
         return
       }
 
@@ -55,9 +62,6 @@ function LoginForm() {
       setLoading(false)
     }
   }
-
-  // Suprimir advertencia de "redirect" param no usado cuando no viene en URL
-  void searchParams
 
   return (
     <div className="flex min-h-full flex-col items-center justify-center px-4 bg-background">

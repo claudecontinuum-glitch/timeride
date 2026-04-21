@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth, deleteUserById, clearMockSession } from "@/lib/mocks/auth"
+import { useAuth, deleteProfile, signOut } from "@/lib/mocks/auth"
 import { Button } from "@/components/ui/Button"
 
 const VEHICLE_LABEL: Record<string, string> = {
@@ -16,23 +16,28 @@ export default function SettingsPage() {
   const router = useRouter()
   const [confirming, setConfirming] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleDeleteProfile() {
     if (!user) return
     setDeleting(true)
+    setError(null)
 
     try {
-      // TODO Supabase: await supabase.from("profiles").delete().eq("user_id", user.id)
-      // y supabase.auth.signOut()
-      await new Promise((r) => setTimeout(r, 400))
+      // Borrar profile primero (libera el rol para re-registro con misma cuenta)
+      const deleteResult = await deleteProfile(user.id)
+      if (!deleteResult.success) {
+        setError(deleteResult.error ?? "No se pudo eliminar el perfil.")
+        return
+      }
 
-      // Eliminar el usuario completo del array (libera el email para re-registro)
-      deleteUserById(user.id)
-      clearMockSession()
+      // Cerrar sesión
+      await signOut()
 
-      console.log("Mock: user deleted", user.id)
-
-      router.replace("/signup")
+      router.replace("/login")
+    } catch (err) {
+      console.error("Failed to delete profile and sign out", err)
+      setError("Ocurrió un error. Intenta de nuevo.")
     } finally {
       setDeleting(false)
     }
@@ -86,10 +91,14 @@ export default function SettingsPage() {
           </h2>
 
           <p className="text-sm text-muted-foreground mb-4">
-            Borrar tu perfil elimina tu cuenta completa, incluyendo tu rol y
-            toda tu información. Para cambiar de rol, esta es la única opción.
-            Esta acción no se puede deshacer.
+            Borrar tu perfil elimina tu rol y configuración. Podrás volver a elegir rol con la misma cuenta. Esta acción no se puede deshacer.
           </p>
+
+          {error && (
+            <p role="alert" className="text-sm text-danger bg-danger/5 rounded-xl px-4 py-2.5 mb-3">
+              {error}
+            </p>
+          )}
 
           {!confirming ? (
             <Button
