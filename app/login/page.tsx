@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, FormEvent } from "react"
+import { useState, FormEvent, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { setMockSession } from "@/lib/mocks/auth"
 import { Button } from "@/components/ui/Button"
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get("redirect") ?? "/"
@@ -142,5 +142,19 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-full items-center justify-center">
+          <p className="text-muted-foreground text-sm">Cargando...</p>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   )
 }
