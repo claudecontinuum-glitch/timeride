@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect } from "react"
 import dynamic from "next/dynamic"
+import { Loader2, Eye, MapPin, Car, X } from "lucide-react"
 import { useGeolocation } from "@/hooks/useGeolocation"
 import { useRideRequests } from "@/hooks/useRideRequests"
 import { useAuth } from "@/lib/mocks/auth"
@@ -17,31 +18,38 @@ import type { LatLngExpression } from "leaflet"
 const MapView = dynamic(() => import("@/components/map/MapView"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-surface-hover">
+    <div className="w-full h-full flex items-center justify-center bg-surface">
       <div className="flex flex-col items-center gap-2">
-        <span className="text-2xl animate-pulse" aria-hidden="true">🗺️</span>
+        <Loader2 size={20} className="text-muted-foreground animate-spin" />
         <p className="text-muted-foreground text-sm">Cargando mapa...</p>
       </div>
     </div>
   ),
 })
 
+const TAXI_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block">
+  <rect x="6" y="3" width="12" height="18" rx="3" fill="#facc15" stroke="#1c1917" stroke-width="1.5"/>
+  <rect x="8" y="5" width="8" height="5" rx="1" fill="#1c1917"/>
+  <rect x="8" y="14" width="8" height="5" rx="1" fill="#1c1917" opacity="0.5"/>
+  <circle cx="12" cy="12" r="0.8" fill="#1c1917"/>
+</svg>`
+
 function MyMarker({ lat, lng }: { lat: number; lng: number }) {
   const icon = L.divIcon({
-    html: `<div style="width:24px;height:24px;font-size:20px;line-height:24px;text-align:center;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))">🚕</div>`,
+    html: `<div style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:#25252f;border:1.5px solid #6366f1;border-radius:50%;box-shadow:0 4px 14px rgba(99,102,241,0.4),0 0 0 1px rgba(0,0,0,0.4);">${TAXI_SVG}</div>`,
     className: "",
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
   })
   return <Marker position={[lat, lng]} icon={icon} />
 }
 
 function PickupMarker({ lat, lng }: { lat: number; lng: number }) {
   const icon = L.divIcon({
-    html: `<div style="width:20px;height:20px;font-size:16px;line-height:20px;text-align:center">📍</div>`,
+    html: `<svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5))"><path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20c0-6.6-5.4-12-12-12z" fill="#f43f5e"/><circle cx="12" cy="12" r="4.5" fill="#fff"/></svg>`,
     className: "",
-    iconSize: [20, 20],
-    iconAnchor: [10, 20],
+    iconSize: [24, 32],
+    iconAnchor: [12, 32],
   })
   return <Marker position={[lat, lng]} icon={icon} />
 }
@@ -285,15 +293,15 @@ export default function ConductorTaxiPage() {
         {/* Estado sin disponibilidad */}
         {!available && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-            <div className="bg-surface/95 rounded-2xl px-5 py-5 shadow-lg text-center mx-6 border border-border">
-              <span className="text-3xl" aria-hidden="true">
-                🟡
-              </span>
-              <p className="mt-2 text-sm font-semibold text-foreground">
+            <div className="surface-elevated rounded-xl px-5 py-5 text-center mx-6 max-w-[280px]">
+              <div className="w-10 h-10 rounded-full bg-warning-soft flex items-center justify-center mx-auto">
+                <Car size={18} className="text-warning" strokeWidth={2} />
+              </div>
+              <p className="mt-3 text-sm font-sans font-semibold text-foreground">
                 No estás disponible
               </p>
-              <p className="text-xs text-muted-foreground mt-1 max-w-[200px] mx-auto">
-                Activa el toggle de arriba para aparecer en el mapa de los pasajeros y recibir solicitudes.
+              <p className="text-xs font-sans text-muted-foreground mt-1.5 leading-snug">
+                Activa el toggle de arriba para aparecer en el mapa y recibir solicitudes.
               </p>
             </div>
           </div>
@@ -302,9 +310,10 @@ export default function ConductorTaxiPage() {
         {/* Estado disponible pero sin requests */}
         {available && !currentRequest && (
           <div className="absolute top-3 left-4 right-4 pointer-events-none z-20">
-            <div className="bg-surface/90 rounded-xl px-4 py-2.5 shadow text-center border border-border">
-              <p className="text-xs text-muted-foreground">
-                <span aria-hidden="true">👁️</span> Visible para pasajeros cercanos
+            <div className="surface-elevated rounded-lg px-3 py-2 flex items-center justify-center gap-1.5">
+              <Eye size={12} className="text-success" strokeWidth={2.25} />
+              <p className="text-xs font-sans text-muted-foreground">
+                Visible para pasajeros cercanos
               </p>
             </div>
           </div>
@@ -325,14 +334,23 @@ export default function ConductorTaxiPage() {
 
       {/* Panel de acciones segun estado del viaje */}
       {currentRequest && inActiveTrip && (
-        <div className="bg-surface border-t-2 border-success px-4 py-3 space-y-3">
+        <div className="surface-elevated border-t border-success px-4 py-3 space-y-3">
           <div className="flex items-center gap-3">
-            <span className="text-xl" aria-hidden="true">🚕</span>
+            <div className="w-9 h-9 rounded-full bg-primary-soft border border-border flex items-center justify-center flex-shrink-0">
+              <span className="font-sans text-xs font-semibold text-foreground">
+                {(currentRequest.pasajero?.nombre ?? "P")
+                  .split(" ")
+                  .map((n) => n.charAt(0))
+                  .slice(0, 2)
+                  .join("")
+                  .toUpperCase()}
+              </span>
+            </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground truncate">
+              <p className="font-sans text-sm font-semibold text-foreground truncate">
                 {currentRequest.pasajero?.nombre ?? "Pasajero"}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="font-sans text-xs text-muted-foreground">
                 {distanceToPickup < 1000
                   ? `${Math.round(distanceToPickup)} m al pickup`
                   : `${(distanceToPickup / 1000).toFixed(1)} km al pickup`}

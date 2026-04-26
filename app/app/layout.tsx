@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
+import { ArrowLeft, Settings, LogOut } from "lucide-react"
 import { useAuth, signOut } from "@/lib/mocks/auth"
 
 function NavBar({ pathname }: { pathname: string }) {
@@ -15,44 +16,33 @@ function NavBar({ pathname }: { pathname: string }) {
   }
 
   const roleLabel = profile?.role === "taxista" ? "Taxista" : "Pasajero"
-
-  // Home segun rol — el mapa principal de cada uno
   const homePath = profile?.role === "taxista" ? "/app/conductor/taxi" : "/app/pasajero"
-
-  // En la home no mostrar boton de volver
   const isOnHome = pathname === homePath
 
   return (
-    <nav
-      className="glass-surface flex items-center justify-between px-4 py-3 relative z-30"
-      style={{ borderRadius: 0, borderTop: "none", borderLeft: "none", borderRight: "none" }}
-    >
+    <nav className="relative z-30 flex items-center justify-between px-4 py-3 bg-surface border-b border-border">
       <div className="flex items-center gap-3 min-w-0">
         {!isOnHome ? (
           <Link
             href={homePath}
             aria-label="Volver al mapa"
-            className="min-w-[40px] min-h-[40px] flex items-center justify-center text-foreground/80 hover:text-foreground rounded-lg hover:bg-white/5 transition-colors"
+            className="min-w-[36px] min-h-[36px] flex items-center justify-center text-foreground/70 hover:text-foreground rounded-md hover:bg-surface-hover transition-colors"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
+            <ArrowLeft size={18} strokeWidth={2.25} />
           </Link>
         ) : (
           <Link href={homePath} aria-label="TimeRide" className="flex flex-col leading-none">
             <span
-              className="font-display text-foreground text-xl font-semibold"
-              style={{ letterSpacing: "0.12em" }}
+              className="font-sans text-foreground text-[15px] font-semibold tracking-tight"
             >
-              TIMERIDE
+              TimeRide
             </span>
-            <span className="font-sans text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
+            <span className="font-sans text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
               <span
-                className="inline-block w-1.5 h-1.5 rounded-full bg-primary"
-                style={{ boxShadow: "0 0 6px var(--color-primary-glow)" }}
+                className="inline-block w-1.5 h-1.5 rounded-full bg-success animate-pulse-soft"
                 aria-hidden="true"
               />
-              <span className="truncate max-w-[120px]">
+              <span className="truncate max-w-[140px]">
                 {profile?.nombre ?? user?.email?.split("@")[0] ?? "—"}
               </span>
               <span className="text-tertiary-foreground">·</span>
@@ -62,10 +52,10 @@ function NavBar({ pathname }: { pathname: string }) {
         )}
         {!isOnHome && (
           <div className="leading-tight min-w-0">
-            <p className="font-sans text-sm font-semibold text-foreground truncate max-w-[140px]">
+            <p className="font-sans text-sm font-semibold text-foreground truncate max-w-[160px]">
               {profile?.nombre ?? user?.email?.split("@")[0] ?? "Usuario"}
             </p>
-            <p className="font-sans text-xs text-muted-foreground">{roleLabel}</p>
+            <p className="font-sans text-[11px] text-muted-foreground">{roleLabel}</p>
           </div>
         )}
       </div>
@@ -73,20 +63,17 @@ function NavBar({ pathname }: { pathname: string }) {
       <div className="flex items-center gap-1">
         <Link
           href="/app/settings"
-          className="min-w-[40px] min-h-[40px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-lg hover:bg-white/5 transition-colors"
+          className="min-w-[36px] min-h-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-md hover:bg-surface-hover transition-colors"
           aria-label="Configuración"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
+          <Settings size={17} strokeWidth={2} />
         </Link>
         <button
           onClick={handleLogout}
-          className="min-w-[40px] min-h-[40px] flex items-center justify-center text-xs font-sans text-muted-foreground hover:text-foreground rounded-lg hover:bg-white/5 transition-colors px-3"
+          className="min-w-[36px] min-h-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-md hover:bg-surface-hover transition-colors"
           aria-label="Cerrar sesión"
         >
-          Salir
+          <LogOut size={17} strokeWidth={2} />
         </button>
       </div>
     </nav>

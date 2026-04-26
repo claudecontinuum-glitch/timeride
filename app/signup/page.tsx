@@ -52,11 +52,8 @@ export default function SignupPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="mb-8 text-center">
-          <span className="text-5xl" aria-hidden="true">
-            🚦
-          </span>
-          <h1 className="mt-3 text-2xl font-bold text-foreground">TimeRide</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Crea tu cuenta</p>
+          <h1 className="text-2xl font-sans font-bold text-foreground tracking-tight">TimeRide</h1>
+          <p className="mt-1 text-sm text-muted-foreground font-sans">Crea tu cuenta</p>
         </div>
 
         {/* Form */}

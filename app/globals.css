@@ -4,60 +4,71 @@
 @import "leaflet/dist/leaflet.css";
 
 @theme inline {
-  /* === TimeRide Design System v1 === */
-  /* Tokens del DESIGN.md — paleta dark editorial con accent cyan */
+  /* === TimeRide Design System v2 === */
+  /* Direccion: dark mode sofisticado con capas, sin neón. Inspirado en Linear / Cron / Vercel. */
 
-  /* Backgrounds */
-  --color-background: #0a0a0c;
-  --color-foreground: #f5f5f7;
-  --color-surface: #13131a;
-  --color-surface-hover: #1a1a22;
-  --color-surface-elevated: #1f1f28;
+  /* === Backgrounds escalonados (5 capas) === */
+  --color-background: #08080b;        /* base — pure-ish black con tint frio */
+  --color-surface: #0f0f14;           /* nivel 1 */
+  --color-surface-hover: #16161d;     /* nivel 2 */
+  --color-surface-elevated: #1c1c25;  /* nivel 3 — cards principales */
+  --color-surface-overlay: #25252f;   /* nivel 4 — modales, popovers */
 
-  /* Borders */
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-strong: rgba(255, 255, 255, 0.16);
-  --color-border-glow: rgba(0, 255, 240, 0.18);
+  /* === Foreground === */
+  --color-foreground: #ededf0;
+  --color-muted-foreground: #9b9ba8;
+  --color-tertiary-foreground: #5a5a68;
 
-  /* Text */
-  --color-muted-foreground: #9ca3a3;
-  --color-tertiary-foreground: #5e6166;
+  /* === Borders === */
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-border-strong: rgba(255, 255, 255, 0.12);
+  --color-border-subtle: rgba(255, 255, 255, 0.04);
 
-  /* Accents */
-  --color-primary: #00fff0;            /* cyan electrico */
-  --color-primary-foreground: #0a0a0c;
-  --color-primary-glow: rgba(0, 255, 240, 0.35);
-  --color-violet: #b388ff;             /* segundo color del gradient cyan→violet */
+  /* === Accents (sofisticados, no neon) === */
+  --color-primary: #6366f1;            /* indigo profundo */
+  --color-primary-foreground: #ffffff;
+  --color-primary-hover: #5558e6;
+  --color-primary-soft: rgba(99, 102, 241, 0.16);
 
-  /* Vehicle */
-  --color-taxi-yellow: #facc15;
+  --color-accent: #a78bfa;             /* violet calido */
+  --color-accent-soft: rgba(167, 139, 250, 0.18);
 
-  /* Estados */
-  --color-secondary: #1f1f28;
-  --color-secondary-foreground: #f5f5f7;
-  --color-success: #22d39c;
-  --color-success-foreground: #0a0a0c;
-  --color-danger: #ff5d6c;
+  --color-success: #10b981;            /* emerald */
+  --color-success-soft: rgba(16, 185, 129, 0.18);
+  --color-success-foreground: #ffffff;
+
+  --color-danger: #f43f5e;             /* rose en lugar de red puro */
+  --color-danger-soft: rgba(244, 63, 94, 0.18);
   --color-danger-foreground: #ffffff;
-  --color-warning: #fbbf24;
-  --color-warning-foreground: #0a0a0c;
 
-  /* Tipografia (cargada via next/font/google en layout.tsx) */
-  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  --color-warning: #f59e0b;            /* amber */
+  --color-warning-soft: rgba(245, 158, 11, 0.18);
+  --color-warning-foreground: #ffffff;
 
-  /* Radio */
-  --radius: 0.75rem;
-  --radius-sm: 0.5rem;
+  --color-secondary: #1c1c25;
+  --color-secondary-foreground: #ededf0;
+
+  /* Taxi yellow — solo para el icono del vehiculo, no para UI */
+  --color-taxi: #facc15;
+
+  /* === Tipografia === */
+  /* Sistema unificado Geist (cargada via geist/font en layout.tsx) */
+  --font-display: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* === Radio === */
+  --radius: 0.625rem;
+  --radius-sm: 0.375rem;
+  --radius-lg: 0.875rem;
   --radius-xl: 1rem;
   --radius-2xl: 1.25rem;
+  --radius-full: 9999px;
 
-  /* Animaciones */
+  /* === Animaciones === */
   --animate-slide-up: slide-up 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-  --animate-fade-in: fade-in 0.3s ease-out;
-  --animate-pulse-glow: pulse-glow 1.6s ease-in-out infinite;
-  --animate-rotate-slow: rotate-slow 8s linear infinite;
+  --animate-fade-in: fade-in 0.25s ease-out;
+  --animate-pulse-soft: pulse-soft 2s ease-in-out infinite;
   --animate-stagger-up: stagger-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -65,7 +76,7 @@
 
 @keyframes slide-up {
   from {
-    transform: translateY(100%);
+    transform: translateY(16px);
     opacity: 0;
   }
   to {
@@ -79,26 +90,19 @@
   to { opacity: 1; }
 }
 
-@keyframes pulse-glow {
+@keyframes pulse-soft {
   0%, 100% {
-    opacity: 0.4;
-    box-shadow: 0 0 0 0 var(--color-primary-glow);
+    opacity: 0.6;
   }
   50% {
     opacity: 1;
-    box-shadow: 0 0 0 6px transparent;
   }
-}
-
-@keyframes rotate-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 }
 
 @keyframes stagger-up {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -106,12 +110,15 @@
   }
 }
 
-@keyframes taxi-pulse-halo {
-  0%, 100% {
-    box-shadow: 0 0 0 0 var(--color-primary-glow), 0 4px 14px rgba(0, 0, 0, 0.5);
+@keyframes taxi-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
   }
-  50% {
-    box-shadow: 0 0 0 14px transparent, 0 4px 14px rgba(0, 0, 0, 0.5);
+  70% {
+    box-shadow: 0 0 0 12px rgba(99, 102, 241, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
   }
 }
 
@@ -141,32 +148,43 @@ body {
   -webkit-overflow-scrolling: touch;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01", "cv01";
 }
 
-/* === Glass primitive === */
-/* Aplicar a headers, status pills, sheets que floten sobre el mapa */
+/* === Glass primitive (sutil, no agresivo) === */
 
 .glass-surface {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(28, 28, 37, 0.72);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid var(--color-border);
-  border-top-color: var(--color-border-glow);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.04) inset,
+    0 24px 48px -12px rgba(0, 0, 0, 0.5),
+    0 8px 16px -8px rgba(0, 0, 0, 0.3);
 }
 
 .glass-pill {
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(12px) saturate(160%);
-  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--color-border);
+}
+
+/* Capas elevadas con depth real (no glass) */
+.surface-elevated {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.04) inset,
+    0 8px 24px -8px rgba(0, 0, 0, 0.4);
 }
 
 /* === Leaflet z-index controlado === */
 
 .leaflet-container {
   z-index: 1;
-  background: #0a0a0c;
+  background: var(--color-background);
 }
 
 .leaflet-pane {
@@ -178,12 +196,13 @@ body {
   z-index: 20;
 }
 
-/* Atribuciones de Leaflet — sutiles en dark mode */
+/* Atribuciones — minimalistas */
 .leaflet-control-attribution {
-  background: rgba(10, 10, 12, 0.6) !important;
+  background: rgba(8, 8, 11, 0.7) !important;
   color: var(--color-tertiary-foreground) !important;
   font-size: 9px !important;
   backdrop-filter: blur(8px);
+  font-family: var(--font-sans) !important;
 }
 
 .leaflet-control-attribution a {
@@ -191,12 +210,14 @@ body {
 }
 
 .leaflet-control-zoom a {
-  background: rgba(19, 19, 26, 0.85) !important;
+  background: rgba(28, 28, 37, 0.85) !important;
   color: var(--color-foreground) !important;
   border: 1px solid var(--color-border) !important;
   backdrop-filter: blur(12px);
+  font-family: var(--font-sans) !important;
+  font-weight: 500 !important;
 }
 
 .leaflet-control-zoom a:hover {
-  background: var(--color-surface-elevated) !important;
+  background: var(--color-surface-overlay) !important;
 }

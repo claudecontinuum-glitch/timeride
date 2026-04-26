@@ -8,6 +8,7 @@ import {
   useContext,
   ReactNode,
 } from "react"
+import { CheckCircle2, AlertCircle, Info, X } from "lucide-react"
 
 export interface ToastItem {
   id: string
@@ -81,38 +82,35 @@ function ToastCard({
     return () => clearTimeout(timer)
   }, [toast.id, onDismiss])
 
-  const bgClass =
+  const config =
     toast.type === "success"
-      ? "bg-emerald-600"
+      ? { Icon: CheckCircle2, iconColor: "text-success" }
       : toast.type === "error"
-      ? "bg-red-600"
-      : "bg-slate-800"
-
-  const prefix =
-    toast.type === "success" ? "✓ " : toast.type === "error" ? "✕ " : "· "
+      ? { Icon: AlertCircle, iconColor: "text-danger" }
+      : { Icon: Info, iconColor: "text-primary" }
+  const { Icon, iconColor } = config
 
   return (
     <div
       role="status"
       className={[
         "pointer-events-auto w-full max-w-sm",
-        "rounded-xl px-4 py-3 text-white text-sm font-medium shadow-xl",
+        "surface-elevated rounded-xl px-3.5 py-3 text-foreground text-sm font-sans font-medium",
         "flex items-start justify-between gap-3",
         "transition-all duration-300",
-        bgClass,
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3",
+        visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-3",
       ].join(" ")}
     >
-      <span className="flex-1">
-        <span aria-hidden="true">{prefix}</span>
-        {toast.message}
+      <span className="flex items-start gap-2.5 flex-1 min-w-0">
+        <Icon size={16} className={`${iconColor} flex-shrink-0 mt-0.5`} strokeWidth={2.25} />
+        <span className="leading-snug">{toast.message}</span>
       </span>
       <button
         onClick={() => onDismiss(toast.id)}
-        className="shrink-0 opacity-70 hover:opacity-100 transition-opacity min-w-[24px] min-h-[24px] flex items-center justify-center"
+        className="shrink-0 text-muted-foreground hover:text-foreground transition-colors min-w-[24px] min-h-[24px] flex items-center justify-center"
         aria-label="Cerrar notificación"
       >
-        ✕
+        <X size={14} strokeWidth={2.25} />
       </button>
     </div>
   )

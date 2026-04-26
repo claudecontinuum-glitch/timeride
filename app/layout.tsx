@@ -1,28 +1,8 @@
 import type { Metadata, Viewport } from "next"
-import { Fraunces, Inter, JetBrains_Mono } from "next/font/google"
+import { GeistSans } from "geist/font/sans"
+import { GeistMono } from "geist/font/mono"
 import { ToastProvider } from "@/components/ui/Toast"
 import "./globals.css"
-
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-fraunces",
-  display: "swap",
-})
-
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-inter",
-  display: "swap",
-})
-
-const jetBrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-  variable: "--font-jetbrains-mono",
-  display: "swap",
-})
 
 export const metadata: Metadata = {
   title: "TimeRide — Taxis en Siguatepeque",
@@ -52,7 +32,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#0a0a0c",
+  themeColor: "#08080b",
 }
 
 export default function RootLayout({
@@ -63,7 +43,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`h-full ${fraunces.variable} ${inter.variable} ${jetBrainsMono.variable}`}
+      className={`h-full ${GeistSans.variable} ${GeistMono.variable}`}
     >
       <body className="h-full">
         <ToastProvider>{children}</ToastProvider>

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react"
 import dynamic from "next/dynamic"
+import { Loader2, Search, MapPin, Wifi, X } from "lucide-react"
 import { useGeolocation } from "@/hooks/useGeolocation"
 import { useToast } from "@/components/ui/Toast"
 import { useAuth } from "@/lib/mocks/auth"
@@ -19,9 +20,9 @@ import { SIGUA_CENTER } from "@/lib/constants"
 const MapView = dynamic(() => import("@/components/map/MapView"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-surface-hover">
+    <div className="w-full h-full flex items-center justify-center bg-surface">
       <div className="flex flex-col items-center gap-2">
-        <span className="text-2xl animate-pulse" aria-hidden="true">🗺️</span>
+        <Loader2 size={20} className="text-muted-foreground animate-spin" />
         <p className="text-muted-foreground text-sm">Cargando mapa...</p>
       </div>
     </div>
@@ -33,7 +34,7 @@ const DriverMarker = dynamic(() => import("@/components/map/DriverMarker"), {
 })
 
 const STATUS_LABEL: Record<string, string> = {
-  pending: "Buscando taxi...",
+  pending: "Buscando taxi",
   accepted: "Taxi asignado",
   en_route: "Taxi en camino",
   arrived: "Tu taxi llegó",
@@ -43,12 +44,19 @@ const STATUS_LABEL: Record<string, string> = {
 
 function MyLocationMarker({ lat, lng }: { lat: number; lng: number }) {
   const icon = L.divIcon({
-    html: `<div style="width:18px;height:18px;border-radius:50%;background:#4f46e5;border:3px solid white;box-shadow:0 0 0 4px rgba(79,70,229,0.25),0 2px 8px rgba(79,70,229,0.5)"></div>`,
+    html: `<div style="position:relative;width:16px;height:16px;"><div style="position:absolute;inset:0;border-radius:50%;background:#6366f1;opacity:0.25;animation:timeride-mylocation-pulse 2.4s ease-out infinite;"></div><div style="position:relative;width:14px;height:14px;border-radius:50%;background:#6366f1;border:2.5px solid #ededf0;box-shadow:0 2px 8px rgba(0,0,0,0.5);margin:1px;"></div></div>`,
     className: "",
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
   })
   return <Marker position={[lat, lng]} icon={icon} />
+}
+
+if (typeof document !== "undefined" && !document.getElementById("timeride-mylocation-keyframes")) {
+  const style = document.createElement("style")
+  style.id = "timeride-mylocation-keyframes"
+  style.textContent = `@keyframes timeride-mylocation-pulse { 0% { transform: scale(1); opacity: 0.4; } 70% { transform: scale(2.5); opacity: 0; } 100% { transform: scale(2.5); opacity: 0; } }`
+  document.head.appendChild(style)
 }
 
 export default function PasajeroPage() {
@@ -173,7 +181,8 @@ export default function PasajeroPage() {
   return (
     <div className="relative h-full w-full">
       {typeof window !== "undefined" && !window.navigator.onLine && (
-        <div className="absolute top-0 left-0 right-0 z-[1100] bg-danger text-danger-foreground text-xs text-center py-2 font-medium">
+        <div className="absolute top-0 left-0 right-0 z-[1100] bg-danger text-danger-foreground text-xs text-center py-2 font-medium font-sans flex items-center justify-center gap-1.5">
+          <Wifi size={13} strokeWidth={2.25} />
           Sin conexión a internet
         </div>
       )}
@@ -201,12 +210,12 @@ export default function PasajeroPage() {
 
       {drivers.length === 0 && !driversError && !hasActiveRide && (
         <div className="absolute top-4 left-4 right-4 z-[1000]">
-          <div className="bg-surface rounded-2xl shadow-md px-4 py-4 text-center border border-border">
-            <span className="text-2xl" aria-hidden="true">🔍</span>
-            <p className="mt-2 text-sm font-medium text-foreground">
+          <div className="surface-elevated rounded-xl px-4 py-4 text-center">
+            <Search size={20} className="text-muted-foreground mx-auto" strokeWidth={2} />
+            <p className="mt-2 font-sans text-sm font-medium text-foreground">
               No hay taxis activos cerca de ti
             </p>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="font-sans text-xs text-muted-foreground mt-1">
               Vuelve en unos minutos.
             </p>
           </div>
@@ -215,18 +224,18 @@ export default function PasajeroPage() {
 
       {isGeoDenied && (
         <div className="absolute top-3 left-4 right-4 z-[1000]">
-          <div className="bg-surface border border-border rounded-2xl shadow-md px-4 py-3 flex items-start gap-3">
-            <span className="text-lg mt-0.5" aria-hidden="true">📍</span>
+          <div className="surface-elevated rounded-xl px-4 py-3 flex items-start gap-3">
+            <MapPin size={18} className="text-warning mt-0.5 flex-shrink-0" strokeWidth={2} />
             <div className="flex-1">
-              <p className="text-sm font-medium text-foreground">
+              <p className="font-sans text-sm font-medium text-foreground">
                 {noGeolocationSupport
                   ? "Tu navegador no soporta geolocalización"
                   : "Necesitamos tu ubicación"}
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="font-sans text-xs text-muted-foreground mt-0.5">
                 {noGeolocationSupport
                   ? "Usa un navegador actualizado (Chrome, Firefox, Safari)."
-                  : "Activa la ubicación en tu navegador para ver taxis cerca. El mapa muestra Siguatepeque."}
+                  : "Activa la ubicación en tu navegador para ver taxis cerca."}
               </p>
             </div>
           </div>
@@ -238,9 +247,10 @@ export default function PasajeroPage() {
         <div className="absolute bottom-0 left-0 right-0 z-[100] p-4">
           <Button
             size="lg"
-            className="w-full max-w-sm mx-auto shadow-2xl"
+            className="w-full max-w-sm mx-auto"
             onClick={() => setRideConfirmOpen(true)}
           >
+            <MapPin size={18} strokeWidth={2.25} />
             Pedir taxi aquí
           </Button>
         </div>
@@ -249,110 +259,100 @@ export default function PasajeroPage() {
       {/* Card de ride activo */}
       {hasActiveRide && activeRide && (
         <div className="absolute bottom-0 left-0 right-0 z-[100] p-4 animate-slide-up">
-          <div
-            className={[
-              "glass-surface rounded-2xl px-4 py-4 max-w-sm mx-auto",
-            ].join(" ")}
-          >
-            {/* Status pill — pulse dot */}
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <div className="glass-pill flex items-center gap-2 rounded-full px-3 py-1.5">
-                <span
-                  className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-pulse-glow"
-                  aria-hidden="true"
-                />
-                <span
-                  className="font-mono text-[10px] font-semibold uppercase text-foreground"
-                  style={{ letterSpacing: "0.08em" }}
-                >
+          <div className="surface-elevated rounded-2xl max-w-sm mx-auto overflow-hidden">
+            {/* Status header */}
+            <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                {activeRide.status === "pending" ? (
+                  <Loader2 size={14} className="text-primary animate-spin" strokeWidth={2.5} />
+                ) : (
+                  <span
+                    className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse-soft"
+                    aria-hidden="true"
+                  />
+                )}
+                <span className="font-sans text-xs font-medium text-foreground">
                   {STATUS_LABEL[activeRide.status]}
                 </span>
               </div>
               {eta && taxiHighlightedStatus && (
-                <div className="text-right" style={{ animation: "stagger-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both" }}>
-                  <p className="font-sans text-[10px] text-muted-foreground leading-none uppercase" style={{ letterSpacing: "0.06em" }}>
-                    Llega en
-                  </p>
-                  <p
-                    className="font-mono text-2xl font-bold text-foreground leading-tight mt-1"
-                    style={{ textShadow: "0 0 12px var(--color-primary-glow)" }}
-                  >
+                <div
+                  className="flex items-baseline gap-1.5"
+                  style={{ animation: "stagger-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both" }}
+                >
+                  <span className="font-sans text-[11px] text-muted-foreground">en</span>
+                  <span className="font-mono text-base font-semibold text-foreground tabular-nums">
                     {eta.etaLabel}
-                  </p>
+                  </span>
                 </div>
               )}
             </div>
 
             {taxiLocation?.profile && taxiHighlightedStatus && (
               <div
-                className="flex items-center gap-3 pt-3 border-t border-border"
-                style={{ animation: "stagger-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both" }}
+                className="flex items-center gap-3 px-4 py-3 border-t border-border"
+                style={{ animation: "stagger-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both" }}
               >
-                {/* Avatar con gradient ring que rota */}
-                <div className="relative flex-shrink-0">
-                  <div
-                    className="absolute inset-0 rounded-full animate-rotate-slow"
-                    style={{
-                      background: "conic-gradient(from 0deg, var(--color-primary), var(--color-violet), var(--color-primary))",
-                      padding: "2px",
-                    }}
-                  >
-                    <div className="w-full h-full rounded-full bg-surface" />
-                  </div>
-                  <div className="relative w-12 h-12 rounded-full bg-surface-elevated flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {taxiLocation.profile.photo_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={taxiLocation.profile.photo_url}
-                        alt={taxiLocation.profile.nombre}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
-                    ) : (
-                      <span
-                        className="font-display text-base font-semibold text-foreground"
-                        aria-hidden="true"
-                      >
-                        {taxiLocation.profile.nombre.charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-display text-base font-semibold text-foreground truncate leading-tight">
-                    {taxiLocation.profile.nombre}
-                  </p>
-                  <p
-                    className="font-mono text-[11px] text-muted-foreground uppercase mt-0.5"
-                    style={{ letterSpacing: "0.06em" }}
-                  >
-                    {taxiLocation.profile.vehicle_color ?? "—"}
-                    {taxiLocation.profile.license_plate ? ` · ${taxiLocation.profile.license_plate}` : ""}
-                  </p>
-                  {taxiLocation.profile.vehicle_model && (
-                    <p className="font-sans text-[11px] text-tertiary-foreground truncate mt-0.5">
-                      {taxiLocation.profile.vehicle_model}
-                    </p>
+                <div className="w-11 h-11 rounded-full bg-primary-soft border border-border-strong flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {taxiLocation.profile.photo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={taxiLocation.profile.photo_url}
+                      alt={taxiLocation.profile.nombre}
+                      className="w-11 h-11 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span
+                      className="font-sans text-sm font-semibold text-foreground"
+                      aria-hidden="true"
+                    >
+                      {taxiLocation.profile.nombre
+                        .split(" ")
+                        .map((n) => n.charAt(0))
+                        .slice(0, 2)
+                        .join("")
+                        .toUpperCase()}
+                    </span>
                   )}
                 </div>
-                {eta && (
-                  <div className="text-right flex-shrink-0">
-                    <p className="font-mono text-[11px] text-muted-foreground">
-                      {eta.distanceLabel}
-                    </p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-sans text-sm font-semibold text-foreground truncate leading-tight">
+                    {taxiLocation.profile.nombre}
+                  </p>
+                  <p className="font-sans text-xs text-muted-foreground mt-0.5">
+                    {[
+                      taxiLocation.profile.vehicle_model,
+                      taxiLocation.profile.vehicle_color,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                </div>
+                {taxiLocation.profile.license_plate && (
+                  <div
+                    className="flex-shrink-0 px-2.5 py-1 rounded-md bg-surface border border-border-strong"
+                    aria-label="Placa"
+                  >
+                    <span className="font-mono text-[11px] font-semibold text-foreground tracking-wider">
+                      {taxiLocation.profile.license_plate}
+                    </span>
                   </div>
                 )}
               </div>
             )}
 
             {activeRide.status === "pending" && (
-              <Button
-                variant="secondary"
-                size="sm"
-                className="w-full mt-3"
-                onClick={handleCancelRide}
-              >
-                Cancelar solicitud
-              </Button>
+              <div className="px-4 pb-4 pt-1">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full"
+                  onClick={handleCancelRide}
+                >
+                  <X size={14} strokeWidth={2.25} />
+                  Cancelar solicitud
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -411,12 +411,14 @@ export default function PasajeroPage() {
             Los taxis cercanos verán tu ubicación actual y podrán aceptar tu
             solicitud.
           </p>
-          <p className="text-xs text-muted-foreground bg-surface-hover rounded-xl px-3 py-2">
-            📍 Pickup:{" "}
-            {position
-              ? `${position.lat.toFixed(4)}, ${position.lng.toFixed(4)}`
-              : "Siguatepeque (centro)"}
-          </p>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-surface rounded-lg px-3 py-2 border border-border">
+            <MapPin size={13} strokeWidth={2} className="text-primary flex-shrink-0" />
+            <span className="font-mono tabular-nums">
+              {position
+                ? `${position.lat.toFixed(4)}, ${position.lng.toFixed(4)}`
+                : "Siguatepeque (centro)"}
+            </span>
+          </div>
           <div className="grid grid-cols-2 gap-3 pt-1">
             <Button
               variant="secondary"

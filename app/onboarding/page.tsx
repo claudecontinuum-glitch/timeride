@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { User, Car } from "lucide-react"
 import { useAuth, createProfile, updateVehicleInfo } from "@/lib/mocks/auth"
 import { RoleCard } from "@/components/ui/RoleCard"
 import { Button } from "@/components/ui/Button"
@@ -148,30 +149,27 @@ export default function OnboardingPage() {
       <div className="w-full max-w-sm mx-auto flex-1 flex flex-col">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-2xl" aria-hidden="true">
-              🚦
-            </span>
-            <span className="font-bold text-foreground">TimeRide</span>
-          </div>
-          <h1 className="text-xl font-bold text-foreground mt-4">
+          <span className="font-sans font-bold text-foreground tracking-tight text-lg">
+            TimeRide
+          </span>
+          <h1 className="text-xl font-sans font-semibold text-foreground mt-4 leading-tight">
             {step === "role"
-              ? "Bienvenido. ¿Cómo vas a usar la app?"
+              ? "¿Cómo vas a usar la app?"
               : "Datos de tu vehículo"}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1.5 text-sm text-muted-foreground font-sans leading-snug">
             {step === "role"
-              ? "Esta decisión no se puede cambiar. Para cambiar de rol, debes borrar tu perfil."
+              ? "Esta decisión no se puede cambiar. Para cambiar de rol, hay que borrar el perfil."
               : "Los pasajeros ven estos datos cuando aceptas un viaje. Tienen que coincidir con la realidad."}
           </p>
 
           {/* Progress */}
-          <div className="flex gap-2 mt-5" aria-label="Progreso">
+          <div className="flex gap-1.5 mt-5" aria-label="Progreso">
             <div className="h-1 flex-1 rounded-full bg-primary" />
             <div
               className={[
                 "h-1 flex-1 rounded-full transition-colors",
-                step === "vehicle" ? "bg-primary" : "bg-border",
+                step === "vehicle" ? "bg-primary" : "bg-border-strong",
               ].join(" ")}
             />
           </div>
@@ -179,18 +177,18 @@ export default function OnboardingPage() {
 
         {/* Paso 1: elegir rol */}
         {step === "role" && (
-          <div className="space-y-3 flex-1">
+          <div className="space-y-2.5 flex-1">
             <RoleCard
               title="Pasajero"
               description="Quiero ver taxis cercanos y pedir un viaje cuando lo necesite."
-              icon="🧍"
+              icon={<User size={20} strokeWidth={2} />}
               selected={selectedRole === "pasajero"}
               onClick={() => setSelectedRole("pasajero")}
             />
             <RoleCard
               title="Taxista"
               description="Manejo un taxi y quiero recibir solicitudes de pasajeros cercanos."
-              icon="🚕"
+              icon={<Car size={20} strokeWidth={2} />}
               selected={selectedRole === "taxista"}
               onClick={() => setSelectedRole("taxista")}
             />

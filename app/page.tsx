@@ -34,10 +34,10 @@ export default function HomePage() {
   return (
     <div className="flex h-full items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-3">
-        <span className="text-4xl" aria-hidden="true">
-          🚦
+        <span className="text-foreground text-xl font-sans font-semibold tracking-tight">
+          TimeRide
         </span>
-        <p className="text-muted-foreground text-sm">Cargando TimeRide...</p>
+        <p className="text-muted-foreground text-sm font-sans">Cargando...</p>
       </div>
     </div>
   )

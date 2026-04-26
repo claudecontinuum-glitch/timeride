@@ -1,4 +1,5 @@
 import { ReactNode } from "react"
+import { Check } from "lucide-react"
 
 interface RoleCardProps {
   title: string
@@ -21,31 +22,36 @@ export function RoleCard({
       onClick={onClick}
       aria-pressed={selected}
       className={[
-        "w-full rounded-2xl border-2 p-5 text-left transition-all duration-150",
+        "w-full rounded-xl border p-4 text-left transition-all duration-150 active:scale-[0.99]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
         selected
-          ? "border-primary bg-primary/5"
-          : "border-border bg-surface hover:border-primary/40",
+          ? "border-primary/60 bg-primary-soft"
+          : "border-border bg-surface hover:bg-surface-hover hover:border-border-strong",
       ].join(" ")}
     >
-      <div className="flex items-start gap-4">
-        <span className="text-3xl" aria-hidden="true">
+      <div className="flex items-start gap-3">
+        <span
+          className={[
+            "flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
+            selected
+              ? "bg-primary/20 text-primary"
+              : "bg-surface-elevated text-muted-foreground",
+          ].join(" ")}
+          aria-hidden="true"
+        >
           {icon}
         </span>
-        <div>
-          <p
-            className={[
-              "text-base font-semibold",
-              selected ? "text-primary" : "text-foreground",
-            ].join(" ")}
-          >
+        <div className="flex-1 min-w-0">
+          <p className="text-base font-sans font-semibold text-foreground leading-tight">
             {title}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          <p className="mt-1 text-sm font-sans text-muted-foreground leading-snug">
+            {description}
+          </p>
         </div>
         {selected && (
-          <span className="ml-auto text-primary text-xl" aria-hidden="true">
-            ✓
+          <span className="ml-auto flex-shrink-0 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+            <Check size={12} strokeWidth={3} className="text-primary-foreground" />
           </span>
         )}
       </div>
