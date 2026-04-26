@@ -233,8 +233,8 @@ export default function PasajeroPage() {
         </div>
       )}
 
-      {/* CTA flotante "Pedir taxi" cuando no hay ride activo */}
-      {!hasActiveRide && drivers.length > 0 && (
+      {/* CTA flotante "Pedir taxi" cuando no hay ride activo y ningun sheet abierto */}
+      {!hasActiveRide && drivers.length > 0 && !sheetOpen && (
         <div className="absolute bottom-0 left-0 right-0 z-[1000] p-4">
           <Button
             size="lg"
@@ -343,16 +343,8 @@ export default function PasajeroPage() {
         blockBackground={false}
       >
         {selectedDriver && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Teléfono:</span>{" "}
-                {selectedDriver.profile?.telefono ?? "No disponible"}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Estado:</span>{" "}
-                {selectedDriver.status === "active" ? "En turno" : "Inactivo"}
-              </p>
               {selectedDriver.profile?.license_plate && (
                 <p className="text-sm text-muted-foreground">
                   <span className="font-medium text-foreground">Placa:</span>{" "}
@@ -365,23 +357,23 @@ export default function PasajeroPage() {
                   {selectedDriver.profile.vehicle_color}
                 </p>
               )}
+              {selectedDriver.profile?.vehicle_model && (
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Modelo:</span>{" "}
+                  {selectedDriver.profile.vehicle_model}
+                </p>
+              )}
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Estado:</span>{" "}
+                {selectedDriver.status === "active" ? "En turno" : "Inactivo"}
+              </p>
             </div>
 
-            {hasActiveRide ? (
-              <div className="bg-surface-hover rounded-xl p-3 text-center">
-                <p className="text-sm text-muted-foreground">
-                  Ya tienes una solicitud activa.
-                </p>
-              </div>
-            ) : (
-              <Button
-                size="lg"
-                className="w-full"
-                onClick={() => setRideConfirmOpen(true)}
-              >
-                Pedir ride aquí
-              </Button>
-            )}
+            <p className="text-xs text-muted-foreground bg-surface-hover rounded-xl px-3 py-2 mt-3">
+              {hasActiveRide
+                ? "Ya tienes una solicitud activa."
+                : "Cualquier taxi cercano puede aceptar tu solicitud — no es necesario elegir uno específico."}
+            </p>
           </div>
         )}
       </BottomSheet>
