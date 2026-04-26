@@ -21,7 +21,7 @@ const variantClasses: Record<Variant, string> = {
 
 const variantStyle: Record<Variant, React.CSSProperties> = {
   primary: {
-    boxShadow: "0 0 0 1px rgba(0, 255, 240, 0.4), 0 4px 16px rgba(0, 255, 240, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
+    boxShadow: "0 0 0 1px rgba(99, 102, 241, 0.35), 0 4px 16px rgba(99, 102, 241, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.12)",
   },
   secondary: {},
   danger: {

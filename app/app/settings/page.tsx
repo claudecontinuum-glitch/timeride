@@ -41,7 +41,8 @@ export default function SettingsPage() {
   const isTaxista = profile?.role === "taxista"
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto px-4 py-6 bg-background">
+    <div className="flex flex-col h-full overflow-y-auto overscroll-contain px-4 py-6 bg-background"
+         style={{ WebkitOverflowScrolling: "touch" }}>
       <div className="max-w-sm mx-auto w-full">
         <h1 className="text-xl font-bold text-foreground mb-6">Configuración</h1>
 

@@ -253,7 +253,7 @@ export default function ConductorTaxiPage() {
       {!position && !available && (
         <div className="px-4 py-2 bg-warning/10 border-b border-warning/30">
           <p className="text-xs text-foreground flex items-center gap-1.5">
-            <span aria-hidden="true">📍</span>
+            <MapPin size={12} className="text-warning flex-shrink-0" strokeWidth={2} aria-hidden="true" />
             Esperando ubicación... activa permisos de GPS para poder recibir rides.
           </p>
         </div>
@@ -263,7 +263,7 @@ export default function ConductorTaxiPage() {
       {geoError && (
         <div className="px-4 py-2 bg-surface border-b border-border">
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <span aria-hidden="true">📍</span>
+            <MapPin size={12} className="flex-shrink-0" strokeWidth={2} aria-hidden="true" />
             Ubicación no disponible. Mapa centrado en Siguatepeque.
           </p>
         </div>

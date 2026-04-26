@@ -24,9 +24,10 @@ export function BottomSheet({
 }: BottomSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null)
 
-  // Cerrar con Escape
+  // Cerrar con Escape + mover foco al sheet al abrir (WCAG 2.4.3 — Focus Order).
   useEffect(() => {
     if (!open) return
+    sheetRef.current?.focus()
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose()
     }
@@ -63,6 +64,7 @@ export function BottomSheet({
       {/* Sheet — glass effect con blur + glow superior */}
       <div
         ref={sheetRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={title ?? "Panel de detalle"}

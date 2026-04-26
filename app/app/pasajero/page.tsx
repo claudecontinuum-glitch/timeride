@@ -52,12 +52,17 @@ function MyLocationMarker({ lat, lng }: { lat: number; lng: number }) {
   return <Marker position={[lat, lng]} icon={icon} />
 }
 
-if (typeof document !== "undefined" && !document.getElementById("timeride-mylocation-keyframes")) {
+let mylocationKeyframesInjected = false
+function ensureMyLocationKeyframes() {
+  if (mylocationKeyframesInjected || typeof document === "undefined") return
+  mylocationKeyframesInjected = true
+  if (document.getElementById("timeride-mylocation-keyframes")) return
   const style = document.createElement("style")
   style.id = "timeride-mylocation-keyframes"
   style.textContent = `@keyframes timeride-mylocation-pulse { 0% { transform: scale(1); opacity: 0.4; } 70% { transform: scale(2.5); opacity: 0; } 100% { transform: scale(2.5); opacity: 0; } }`
   document.head.appendChild(style)
 }
+ensureMyLocationKeyframes()
 
 export default function PasajeroPage() {
   const { position, error: geoError, loading: geoLoading } = useGeolocation({

@@ -117,11 +117,13 @@ export function useRideRequests(
       .on(
         "postgres_changes",
         {
-          // Filter server-side eliminado intencionalmente: requiere
-          // REPLICA IDENTITY FULL en la tabla. Filtramos client-side abajo.
+          // INSERT incluye fila completa en el WAL aun sin REPLICA IDENTITY FULL,
+          // asi que el filter server-side por status SI funciona. Reduce trafico
+          // websocket cuando hay rides en otros estados (accepted, completed, etc).
           event: "INSERT",
           schema: "public",
           table: "ride_requests",
+          filter: "status=eq.pending",
         },
         (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           const row = payload.new as Record<string, unknown>

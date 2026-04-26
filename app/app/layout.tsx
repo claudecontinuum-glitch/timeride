@@ -125,7 +125,7 @@ export default function AppLayout({
   return (
     <div className="flex flex-col h-full bg-background">
       <NavBar pathname={pathname} />
-      <main className="flex-1 overflow-hidden relative">{children}</main>
+      <main className="flex-1 min-h-0 overflow-hidden relative">{children}</main>
     </div>
   )
 }

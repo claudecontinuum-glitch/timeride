@@ -36,7 +36,7 @@ const TAXI_ASSIGNED_ICON_HTML = `
       inset: 0;
       border-radius: 50%;
       background: rgba(99, 102, 241, 0.15);
-      animation: timeride-taxi-ring 2s ease-out infinite;
+      animation: timeride-taxi-ring 2s ease-out 3;
     "></div>
     <div style="
       position: relative;

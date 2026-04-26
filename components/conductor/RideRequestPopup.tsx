@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useRef } from "react"
 import { Bell, X, Check } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 import type { RideRequest } from "@/lib/types"
@@ -28,6 +29,12 @@ export function RideRequestPopup({
     .slice(0, 2)
     .join("")
     .toUpperCase()
+
+  // Mover foco al primer boton al montar (WCAG 2.4.3 — al abrir alertdialog).
+  const firstActionRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    firstActionRef.current?.focus()
+  }, [])
 
   return (
     <div
@@ -68,6 +75,7 @@ export function RideRequestPopup({
         {/* Acciones */}
         <div className="grid grid-cols-2 gap-2 px-4 pb-4">
           <Button
+            ref={firstActionRef}
             variant="secondary"
             size="md"
             onClick={() => onReject(request.id)}

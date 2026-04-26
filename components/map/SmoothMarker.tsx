@@ -33,18 +33,29 @@ export default function SmoothMarker({
   eventHandlers,
 }: SmoothMarkerProps) {
   const [displayPos, setDisplayPos] = useState<[number, number]>([lat, lng])
+  // Ref del display actual: permite leer la posicion live sin re-correr el efecto.
+  // Si entran 2 updates de lat/lng en rapido sucesion (reconexion wifi), el
+  // efecto que inicia la nueva animacion lee la posicion interpolada actual
+  // como fromPos en vez de un displayPos stale del render previo.
+  const displayPosRef = useRef<[number, number]>([lat, lng])
   const animFrameRef = useRef<number | null>(null)
   const fromPosRef = useRef<[number, number]>([lat, lng])
   const targetPosRef = useRef<[number, number]>([lat, lng])
   const startTimeRef = useRef<number | null>(null)
 
+  const updateDisplay = (pos: [number, number]) => {
+    displayPosRef.current = pos
+    setDisplayPos(pos)
+  }
+
   useEffect(() => {
     // Si la nueva posicion es identica a la actual, no animar.
-    const [curLat, curLng] = displayPos
+    const [curLat, curLng] = displayPosRef.current
     if (curLat === lat && curLng === lng) return
 
-    // Setup de la animacion
-    fromPosRef.current = displayPos
+    // Setup de la animacion: arrancamos desde la posicion live (ref), no
+    // desde displayPos stale del render previo.
+    fromPosRef.current = displayPosRef.current
     targetPosRef.current = [lat, lng]
     startTimeRef.current = null
 
@@ -65,7 +76,7 @@ export default function SmoothMarker({
       const newLat = fromLat + (toLat - fromLat) * eased
       const newLng = fromLng + (toLng - fromLng) * eased
 
-      setDisplayPos([newLat, newLng])
+      updateDisplay([newLat, newLng])
 
       if (progress < 1) {
         animFrameRef.current = requestAnimationFrame(step)
@@ -82,8 +93,6 @@ export default function SmoothMarker({
         animFrameRef.current = null
       }
     }
-    // displayPos intencional fuera de deps: solo reaccionamos a cambios externos de lat/lng.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lat, lng, durationMs])
 
   return (
