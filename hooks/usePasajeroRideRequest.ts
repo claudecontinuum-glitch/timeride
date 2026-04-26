@@ -27,6 +27,21 @@ export function usePasajeroRideRequest(userId: string | null): UsePasajeroRideRe
 
     const supabase = getSupabaseBrowser()
 
+    // Lazy cleanup de rides huerfanos del pasajero: cancela rides propios
+    // que llevan > 15 min sin progresar a completed/cancelled. Defensa
+    // contra el caso "taxista cerro la app sin marcar finalizacion" que
+    // dejaba el ride como activo forever en la UI del pasajero.
+    const cleanupStaleRides = async () => {
+      const STALE_THRESHOLD_MS = 15 * 60 * 1000
+      const cutoff = new Date(Date.now() - STALE_THRESHOLD_MS).toISOString()
+      await supabase
+        .from("ride_requests")
+        .update({ status: "cancelled" })
+        .eq("pasajero_id", userId)
+        .in("status", ["pending", "accepted", "en_route", "arrived"])
+        .lt("created_at", cutoff)
+    }
+
     const fetchActive = async () => {
       const { data, error } = await supabase
         .from("ride_requests")
@@ -48,7 +63,7 @@ export function usePasajeroRideRequest(userId: string | null): UsePasajeroRideRe
       setActiveRide(data as RideRequest)
     }
 
-    fetchActive()
+    cleanupStaleRides().then(fetchActive)
 
     // Suscribir a cambios del ride activo del pasajero
     const channel = supabase

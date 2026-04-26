@@ -34,9 +34,17 @@ interface UseRideRequestsReturn {
  * Hook de ride requests para taxista.
  * Suscripción Realtime a ride_requests con status=pending.
  * Filtra en cliente por distancia al taxista.
+ *
+ * Si recibe `taxistaId`, al montar hace dos cosas:
+ *   1. Cleanup lazy: cancela rides aceptados por mi mas viejos de 30 min sin
+ *      progresar (defensa contra rides huerfanos cuando cerre la app sin marcar).
+ *   2. Hidratacion: si tengo un ride en accepted/en_route/arrived al loguear,
+ *      lo carga en currentRequest aunque available sea false. Asi puedo cerrar
+ *      el ride huerfano que deje abierto.
  */
 export function useRideRequests(
-  driverPosition?: { lat: number; lng: number } | null
+  driverPosition?: { lat: number; lng: number } | null,
+  taxistaId?: string | null
 ): UseRideRequestsReturn {
   const [available, setAvailableState] = useState(false)
   const [currentRequest, setCurrentRequest] = useState<RideRequest | null>(null)
@@ -57,6 +65,50 @@ export function useRideRequests(
   useEffect(() => {
     currentRequestRef.current = currentRequest
   }, [currentRequest])
+
+  // Cleanup + hidratacion al loguear (solo cuando cambia el taxistaId).
+  useEffect(() => {
+    if (!taxistaId) return
+    const supabase = getSupabaseBrowser()
+    const STALE_THRESHOLD_MS = 30 * 60 * 1000
+
+    const run = async () => {
+      // 1. Cancelar rides aceptados por mi que ya estan stale.
+      const cutoff = new Date(Date.now() - STALE_THRESHOLD_MS).toISOString()
+      await supabase
+        .from("ride_requests")
+        .update({ status: "cancelled" })
+        .eq("accepted_by", taxistaId)
+        .in("status", ["accepted", "en_route", "arrived"])
+        .lt("accepted_at", cutoff)
+
+      // 2. Hidratar: si tengo un ride activo (no stale), cargarlo para que
+      // pueda cerrarlo desde la UI aunque no haya activado availability.
+      const { data, error } = await supabase
+        .from("ride_requests")
+        .select("*, profiles!pasajero_id(*)")
+        .eq("accepted_by", taxistaId)
+        .in("status", ["accepted", "en_route", "arrived"])
+        .order("accepted_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (error) {
+        console.error("Failed to hydrate active ride for taxista", error)
+        return
+      }
+      if (data) {
+        const hydrated = {
+          ...(data as Record<string, unknown>),
+          pasajero: (data as Record<string, unknown>)["profiles"],
+        } as unknown as RideRequest
+        setCurrentRequest(hydrated)
+        currentRequestRef.current = hydrated
+      }
+    }
+
+    run()
+  }, [taxistaId])
 
   const checkPendingRequests = useCallback(async () => {
     if (currentRequestRef.current) return

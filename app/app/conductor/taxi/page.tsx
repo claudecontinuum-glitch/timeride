@@ -70,6 +70,7 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
 export default function ConductorTaxiPage() {
   const { position, error: geoError } = useGeolocation({ fallbackToCenter: true })
   const { user, profile } = useAuth()
+  const taxistaId = user?.id ?? null
   const { addToast } = useToast()
   const {
     available,
@@ -81,7 +82,7 @@ export default function ConductorTaxiPage() {
     markArrived,
     markCompleted,
     cancelByTaxista,
-  } = useRideRequests(position)
+  } = useRideRequests(position, taxistaId)
 
   // Actualizar driver_locations en Supabase cuando la posición cambia y está disponible
   useEffect(() => {
