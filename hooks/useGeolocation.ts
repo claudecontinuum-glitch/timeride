@@ -86,6 +86,17 @@ export function useGeolocation({
     )
   }, [enableHighAccuracy, handleSuccess, handleError, stopWatching])
 
+  // Re-fetch helper: usado al volver online o al volver al foreground si el
+  // usuario concedio permisos despues de haber sido rechazados.
+  const refetchPosition = useCallback(() => {
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(handleSuccess, handleError, {
+      enableHighAccuracy,
+      maximumAge: 10000,
+      timeout: 15000,
+    })
+  }, [enableHighAccuracy, handleSuccess, handleError])
+
   useEffect(() => {
     if (!navigator.geolocation) {
       // Usar queueMicrotask para evitar setState síncrono en useEffect
@@ -109,8 +120,18 @@ export function useGeolocation({
       queueMicrotask(startWatching)
     }
 
+    // Re-intentar al volver al foreground o al volver online — cubre el caso
+    // de usuario que rechazo permiso, lo concedio en settings y vuelve.
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") refetchPosition()
+    }
+    document.addEventListener("visibilitychange", handleVisibility)
+    window.addEventListener("online", refetchPosition)
+
     return () => {
       stopWatching()
+      document.removeEventListener("visibilitychange", handleVisibility)
+      window.removeEventListener("online", refetchPosition)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

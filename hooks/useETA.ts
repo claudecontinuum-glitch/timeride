@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { ASSUMED_TAXI_SPEED_KMH } from "@/lib/constants"
 
 /**
@@ -42,19 +42,23 @@ interface ETAResult {
  *  - Usa haversine (linea recta), no routing real. En ciudades chicas como
  *    Siguatepeque la diferencia es chica; en ciudades grandes habria que usar OSRM.
  *  - speedKmh override permite usar la velocidad real del GPS si esta disponible.
+ *  - El ETA mostrado es **monotono decreciente** mientras el taxi se acerque.
+ *    Si el taxi se aleja momentaneamente (gira en una calle, da una vuelta),
+ *    el ETA mostrado mantiene el ultimo minimo en vez de subir y dar mala UX.
+ *    Cuando vuelve a acercarse, baja desde donde estaba.
+ *  - Si la distancia real cambia >50% respecto al display, descongelamos
+ *    (probablemente el taxi se desvio mucho — mejor mostrar realidad).
  */
 export function useETA(
   from: { lat: number; lng: number } | null,
   to: { lat: number; lng: number } | null,
   speedKmh: number = ASSUMED_TAXI_SPEED_KMH
 ): ETAResult | null {
-  return useMemo(() => {
+  const rawResult = useMemo(() => {
     if (!from || !to) return null
     if (speedKmh <= 0) return null
 
     const distanceMeters = haversineMeters(from.lat, from.lng, to.lat, to.lng)
-
-    // ETA en horas = distancia / velocidad
     const etaHours = distanceMeters / 1000 / speedKmh
     const etaMinutesRaw = etaHours * 60
     const etaMinutes = Math.max(1, Math.round(etaMinutesRaw))
@@ -67,4 +71,48 @@ export function useETA(
 
     return { distanceMeters, etaMinutes, etaLabel, distanceLabel }
   }, [from, to, speedKmh])
+
+  // Display monotono decreciente — el ETA en pantalla solo baja, salvo que
+  // la realidad se desvie >50% (taxi cambio mucho de ruta).
+  const displayedRef = useRef<ETAResult | null>(null)
+  const [displayed, setDisplayed] = useState<ETAResult | null>(null)
+
+  // Sync displayed con la regla monotona — los setState corren post-check de
+  // rawResult, no son pure-trigger. eslint-disable justificado.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!rawResult) {
+      displayedRef.current = null
+      setDisplayed(null)
+      return
+    }
+    const prev = displayedRef.current
+    if (!prev) {
+      displayedRef.current = rawResult
+      setDisplayed(rawResult)
+      return
+    }
+    const driftRatio =
+      Math.abs(rawResult.distanceMeters - prev.distanceMeters) /
+      Math.max(prev.distanceMeters, 1)
+
+    // Caso A: el ETA real bajo o se mantuvo → adoptarlo
+    if (rawResult.etaMinutes <= prev.etaMinutes) {
+      displayedRef.current = rawResult
+      setDisplayed(rawResult)
+      return
+    }
+
+    // Caso B: drift grande (>50%) → adoptar realidad aunque suba (taxi se desvio mucho)
+    if (driftRatio > 0.5) {
+      displayedRef.current = rawResult
+      setDisplayed(rawResult)
+      return
+    }
+
+    // Caso C: subio chiquito → mantener display previo (no asusta al usuario)
+  }, [rawResult])
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  return displayed
 }
