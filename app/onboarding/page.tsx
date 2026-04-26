@@ -45,12 +45,13 @@ export default function OnboardingPage() {
   // Para taxistas con datos pendientes, saltar directo al step de vehicle.
   // Setea state post-await del fetch de profile; el linter no distingue, lo silenciamos.
   useEffect(() => {
+    if (loading) return
     if (!taxistaIncomplete) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedRole("taxista")
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setStep("vehicle")
-  }, [taxistaIncomplete])
+  }, [taxistaIncomplete, loading])
 
   function handleContinueRole() {
     if (selectedRole === "pasajero") {

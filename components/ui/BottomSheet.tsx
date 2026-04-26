@@ -54,13 +54,16 @@ export function BottomSheet({
       {/* Backdrop — solo si blockBackground=true */}
       {blockBackground && (
         <div
-          className="fixed inset-0 z-40 bg-black/40"
+          className="fixed inset-0 z-[1100] bg-black/40"
           onClick={onClose}
           aria-hidden="true"
         />
       )}
 
-      {/* Sheet — sin backdrop, solo sombra hacia arriba */}
+      {/* Sheet — z-index alineado con la semantica de bloqueo:
+        * los sheets que bloquean el fondo (modales) van mas arriba que los
+        * que no bloquean (info read-only). Asi nunca un detalle queda encima
+        * de una confirmacion. */}
       <div
         ref={sheetRef}
         role="dialog"
@@ -68,7 +71,7 @@ export function BottomSheet({
         aria-label={title ?? "Panel de detalle"}
         className={[
           "fixed bottom-0 left-0 right-0",
-          blockBackground ? "z-50" : "z-[1000]",
+          blockBackground ? "z-[1110]" : "z-[1000]",
           "bg-surface rounded-t-2xl shadow-[0_-4px_24px_rgba(0,0,0,0.18)]",
           "max-h-[55vh] overflow-y-auto",
           "animate-slide-up",

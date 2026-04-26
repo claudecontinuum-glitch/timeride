@@ -41,11 +41,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ addToast }}>
       {children}
-      {/* Toasts fijados al bottom, centrados, sobre todo el contenido */}
+      {/* Toasts fijados arriba, centrados, sobre todo el contenido —
+        * arriba en vez de abajo para no colisionar con los BottomSheets que
+        * cubren la mitad inferior de la pantalla en mobile. */}
       <div
         aria-live="polite"
         aria-label="Notificaciones"
-        className="fixed bottom-6 left-4 right-4 z-[1200] flex flex-col gap-2 items-center pointer-events-none"
+        className="fixed top-20 left-4 right-4 z-[1200] flex flex-col gap-2 items-center pointer-events-none"
       >
         {toasts.map((t) => (
           <ToastCard key={t.id} toast={t} onDismiss={removeToast} />

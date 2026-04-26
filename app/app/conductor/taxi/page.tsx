@@ -300,8 +300,10 @@ export default function ConductorTaxiPage() {
         )}
       </div>
 
-      {/* Popup de ride request */}
-      {currentRequest && currentRequest.status === "pending" && (
+      {/* Popup de ride request — solo cuando NO hay viaje activo en curso,
+        * para evitar que el popup de pending coexista con el panel de
+        * accepted/en_route/arrived durante el frame de transicion realtime. */}
+      {currentRequest && currentRequest.status === "pending" && !inActiveTrip && (
         <RideRequestPopup
           request={currentRequest}
           distanceMeters={distanceToPickup}
