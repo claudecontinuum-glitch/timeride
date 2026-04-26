@@ -233,8 +233,8 @@ export default function PasajeroPage() {
         </div>
       )}
 
-      {/* CTA flotante "Pedir taxi" cuando no hay ride activo y ningun sheet abierto */}
-      {!hasActiveRide && drivers.length > 0 && !sheetOpen && (
+      {/* CTA flotante "Pedir taxi" — solo cuando no hay ride activo, ningun sheet abierto y no hay confirm en curso */}
+      {!hasActiveRide && drivers.length > 0 && !sheetOpen && !rideConfirmOpen && (
         <div className="absolute bottom-0 left-0 right-0 z-[1000] p-4">
           <Button
             size="lg"
