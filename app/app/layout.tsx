@@ -76,16 +76,34 @@ export default function AppLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
 
   useEffect(() => {
     if (loading) return
+
     if (!user) {
       router.replace(`/login?redirect=${encodeURIComponent(pathname)}`)
+      return
     }
-  }, [user, loading, router, pathname])
+
+    // Sin profile → onboarding
+    if (!profile) {
+      router.replace("/onboarding")
+      return
+    }
+
+    // Role guard: cada rol solo puede ver su propia pantalla principal
+    if (profile.role === "pasajero" && pathname.startsWith("/app/conductor")) {
+      router.replace("/app/pasajero")
+      return
+    }
+    if (profile.role === "taxista" && pathname === "/app/pasajero") {
+      router.replace("/app/conductor/taxi")
+      return
+    }
+  }, [user, profile, loading, router, pathname])
 
   if (loading) {
     return (
