@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Settings, LogOut } from "lucide-react"
 import { useAuth, signOut } from "@/lib/mocks/auth"
+import { useNightMode } from "@/hooks/useNightMode"
 
 function NavBar({ pathname }: { pathname: string }) {
   const { user, profile } = useAuth()
@@ -88,6 +89,7 @@ export default function AppLayout({
   const { user, profile, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
+  useNightMode()
 
   useEffect(() => {
     if (loading) return

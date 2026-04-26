@@ -122,6 +122,29 @@
   }
 }
 
+@keyframes welcome-fade {
+  0%   { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  20%  { opacity: 1; transform: translateY(0) scale(1); }
+  80%  { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-6px) scale(0.98); }
+}
+
+.animate-welcome-fade {
+  animation: welcome-fade 2.2s ease-in-out forwards;
+}
+
+/* === Modo nocturno automatico === */
+/* Aplicado en <html class="night-mode"> entre 19:00 y 05:00 hora local.
+   El cambio es sutil: el primary se vuelve mas calido (rose) en lugar de
+   indigo, manteniendo todo lo demas estable. */
+html.night-mode {
+  --color-primary: #fb7185;
+  --color-primary-hover: #f43f5e;
+  --color-primary-soft: rgba(251, 113, 133, 0.16);
+  --color-accent: #fda4af;
+  --color-accent-soft: rgba(253, 164, 175, 0.18);
+}
+
 /* === Reset + base === */
 
 :root {

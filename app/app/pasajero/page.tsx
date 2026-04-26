@@ -12,6 +12,8 @@ import { useTaxiTracking } from "@/hooks/useTaxiTracking"
 import { useETA } from "@/hooks/useETA"
 import { BottomSheet } from "@/components/ui/BottomSheet"
 import { Button } from "@/components/ui/Button"
+import { WelcomeBanner } from "@/components/ui/WelcomeBanner"
+import { RideCompletedSticker } from "@/components/ui/RideCompletedSticker"
 import type { DriverLocation } from "@/lib/types"
 import { Marker } from "react-leaflet"
 import L from "leaflet"
@@ -33,13 +35,17 @@ const DriverMarker = dynamic(() => import("@/components/map/DriverMarker"), {
   ssr: false,
 })
 
+const MapController = dynamic(() => import("@/components/map/MapController"), {
+  ssr: false,
+})
+
 const STATUS_LABEL: Record<string, string> = {
-  pending: "Buscando taxi",
-  accepted: "Taxi asignado",
+  pending: "Buscando taxi cerca",
+  accepted: "Taxi asignado, va en camino",
   en_route: "Taxi en camino",
   arrived: "Tu taxi llegó",
   completed: "Viaje completado",
-  cancelled: "Cancelado",
+  cancelled: "Viaje cancelado",
 }
 
 function MyLocationMarker({ lat, lng }: { lat: number; lng: number }) {
@@ -100,6 +106,7 @@ export default function PasajeroPage() {
   const [selectedDriver, setSelectedDriver] = useState<DriverLocation | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [rideConfirmOpen, setRideConfirmOpen] = useState(false)
+  const [showCompletedSticker, setShowCompletedSticker] = useState(false)
   const prevStatusRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
@@ -107,20 +114,27 @@ export default function PasajeroPage() {
       activeRide?.status === "accepted" &&
       prevStatusRef.current !== "accepted"
     ) {
-      addToast("Un taxi aceptó tu solicitud", "success")
+      addToast("Un taxista aceptó tu viaje. Va en camino.", "success")
     }
     if (
       activeRide?.status === "arrived" &&
       prevStatusRef.current !== "arrived"
     ) {
-      addToast("Tu taxi llegó", "success")
+      addToast("Tu taxi llegó al punto de recogida.", "success")
+    }
+    if (
+      activeRide?.status === "completed" &&
+      prevStatusRef.current &&
+      prevStatusRef.current !== "completed"
+    ) {
+      setShowCompletedSticker(true)
     }
     prevStatusRef.current = activeRide?.status
   }, [activeRide?.status, addToast])
 
   useEffect(() => {
     if (driversError) {
-      addToast("Sin conexión. Reintentando...", "error")
+      addToast("Sin conexión. Reintentando en segundo plano.", "error")
     }
   }, [driversError, addToast])
 
@@ -142,19 +156,19 @@ export default function PasajeroPage() {
     const ride = await createRideRequest(lat, lng)
 
     if (!ride) {
-      addToast("No se pudo enviar la solicitud. Intenta de nuevo.", "error")
+      addToast("No pudimos enviar la solicitud. Intenta otra vez.", "error")
       return
     }
 
     setRideConfirmOpen(false)
     setSheetOpen(false)
-    addToast("Solicitud enviada. Esperando taxi...", "success")
+    addToast("Solicitud enviada. Buscando taxis cercanos.", "success")
   }, [user, profile, position, createRideRequest, addToast])
 
   const handleCancelRide = useCallback(async () => {
     if (!activeRide) return
     await cancelRideRequest(activeRide.id)
-    addToast("Solicitud cancelada.", "info")
+    addToast("Cancelaste la solicitud.", "info")
   }, [activeRide, cancelRideRequest, addToast])
 
   const mapCenter = position
@@ -185,6 +199,12 @@ export default function PasajeroPage() {
 
   return (
     <div className="relative h-full w-full">
+      {profile?.nombre && <WelcomeBanner name={profile.nombre.split(" ")[0]} />}
+      <RideCompletedSticker
+        show={showCompletedSticker}
+        onDismiss={() => setShowCompletedSticker(false)}
+      />
+
       {typeof window !== "undefined" && !window.navigator.onLine && (
         <div className="absolute top-0 left-0 right-0 z-[1100] bg-danger text-danger-foreground text-xs text-center py-2 font-medium font-sans flex items-center justify-center gap-1.5">
           <Wifi size={13} strokeWidth={2.25} />
@@ -193,6 +213,15 @@ export default function PasajeroPage() {
       )}
 
       <MapView center={mapCenter}>
+        {/* Follow camera: sigue al taxi asignado mientras esta accepted/en_route.
+            Cuando llega o se cancela, vuelve al pickup. */}
+        <MapController
+          followLat={taxiHighlightedStatus && taxiLocation ? taxiLocation.lat : null}
+          followLng={taxiHighlightedStatus && taxiLocation ? taxiLocation.lng : null}
+          fallbackLat={!hasActiveRide && position ? position.lat : null}
+          fallbackLng={!hasActiveRide && position ? position.lng : null}
+        />
+
         {position && <MyLocationMarker lat={position.lat} lng={position.lng} />}
 
         {driversToShow.map((driver) => (

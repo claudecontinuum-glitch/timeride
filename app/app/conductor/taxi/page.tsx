@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/Toast"
 import { getSupabaseBrowser } from "@/lib/supabase"
 import { RideRequestPopup } from "@/components/conductor/RideRequestPopup"
 import { Button } from "@/components/ui/Button"
+import { WelcomeBanner } from "@/components/ui/WelcomeBanner"
 import { SIGUA_CENTER } from "@/lib/constants"
 import { Marker, Polyline } from "react-leaflet"
 import L from "leaflet"
@@ -68,7 +69,7 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
 
 export default function ConductorTaxiPage() {
   const { position, error: geoError } = useGeolocation({ fallbackToCenter: true })
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const { addToast } = useToast()
   const {
     available,
@@ -147,7 +148,7 @@ export default function ConductorTaxiPage() {
     async (id: string) => {
       const taxistaId = user?.id ?? "unknown"
       await acceptRequest(id, taxistaId)
-      addToast("Ride aceptado. Ve al punto de recogida.", "success")
+      addToast("Aceptaste el ride. Dirígete al punto de recogida.", "success")
     },
     [acceptRequest, addToast, user]
   )
@@ -155,7 +156,7 @@ export default function ConductorTaxiPage() {
   const handleReject = useCallback(
     (id: string) => {
       rejectRequest(id)
-      addToast("Solicitud rechazada.", "info")
+      addToast("Rechazaste la solicitud.", "info")
     },
     [rejectRequest, addToast]
   )
@@ -189,40 +190,42 @@ export default function ConductorTaxiPage() {
   const handleMarkEnRoute = useCallback(async () => {
     if (!currentRequest) return
     await markEnRoute(currentRequest.id)
-    addToast("En ruta al pasajero", "info")
+    addToast("En camino al pasajero.", "info")
   }, [currentRequest, markEnRoute, addToast])
 
   const handleMarkArrived = useCallback(async () => {
     if (!currentRequest) return
     await markArrived(currentRequest.id)
-    addToast("Marcaste que llegaste al pasajero", "info")
+    addToast("Llegaste al punto de recogida. Espera al pasajero.", "info")
   }, [currentRequest, markArrived, addToast])
 
   const handleMarkCompleted = useCallback(async () => {
     if (!currentRequest) return
     await markCompleted(currentRequest.id)
-    addToast("Viaje completado", "success")
+    addToast("Viaje completado. Buen trabajo.", "success")
   }, [currentRequest, markCompleted, addToast])
 
   const handleCancelByTaxista = useCallback(async () => {
     if (!currentRequest) return
     await cancelByTaxista(currentRequest.id)
-    addToast("Viaje cancelado", "info")
+    addToast("Viaje cancelado.", "info")
   }, [currentRequest, cancelByTaxista, addToast])
 
   return (
     <div className="flex flex-col h-full">
+      {profile?.nombre && <WelcomeBanner name={profile.nombre.split(" ")[0]} />}
+
       {/* Toggle de disponibilidad */}
       <div className="flex items-center justify-between px-4 py-3 bg-surface border-b border-border">
         <div>
           <p className="text-sm font-semibold text-foreground">
-            {available ? "Disponible para rides" : "No disponible"}
+            {available ? "Disponible" : "No disponible"}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {available
               ? isRequestAccepted
-                ? "Ve al punto de recogida"
-                : "Esperando solicitudes cercanas..."
+                ? "Vas al punto de recogida"
+                : "Esperando solicitudes cercanas"
               : "Activa para recibir rides"}
           </p>
         </div>
