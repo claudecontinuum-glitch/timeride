@@ -43,6 +43,9 @@ export function useRideRequests(
   const currentRequestRef = useRef<RideRequest | null>(null)
   const positionRef = useRef(driverPosition ?? SIGUA_CENTER)
   const channelRef = useRef<ReturnType<typeof getSupabaseBrowser>["channel"] | null>(null)
+  // Set de IDs de rides rechazados por este taxista — para no volver a mostrarlos
+  // si vuelven a aparecer en checkPendingRequests o en el listener de UPDATE.
+  const rejectedIdsRef = useRef<Set<string>>(new Set())
 
   // Mantener ref sincronizada
   useEffect(() => {
@@ -91,8 +94,13 @@ export function useRideRequests(
             haversineMeters(lat, lng, r.pickup_lat, r.pickup_lng) <= DEFAULT_RADIUS_M
         )
 
-      if (nearby.length > 0) {
-        const newest = nearby[0] as RideRequest
+      // Filtrar IDs ya rechazados por este taxista en esta sesion
+      const fresh = nearby.filter(
+        (r: RideRequest) => !rejectedIdsRef.current.has(r.id)
+      )
+
+      if (fresh.length > 0) {
+        const newest = fresh[0] as RideRequest
         setCurrentRequest(newest)
         currentRequestRef.current = newest
       }
@@ -122,6 +130,10 @@ export function useRideRequests(
           if (row["status"] !== "pending") return
 
           if (currentRequestRef.current) return
+
+          // Si ya rechazamos este ride en esta sesion, ignorar
+          const rideId = row["id"] as string
+          if (rejectedIdsRef.current.has(rideId)) return
 
           const { lat, lng } = positionRef.current
           const pickupLat = row["pickup_lat"] as number
@@ -239,8 +251,11 @@ export function useRideRequests(
     }
   }, [])
 
-  const rejectRequest = useCallback((_id: string) => {
-    // Solo ignoramos localmente — no cancelamos para que otro taxista pueda aceptar
+  const rejectRequest = useCallback((id: string) => {
+    // Solo ignoramos localmente — no cancelamos para que otro taxista pueda aceptar.
+    // Guardamos el ID en rejectedIdsRef para no volver a recibirlo via realtime
+    // o checkPendingRequests en esta sesion.
+    rejectedIdsRef.current.add(id)
     setCurrentRequest(null)
     currentRequestRef.current = null
   }, [])

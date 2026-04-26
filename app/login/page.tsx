@@ -41,10 +41,14 @@ function LoginForm() {
         return
       }
 
-      // Redirigir según rol
+      // Redirigir según rol — solo aceptar paths internos para evitar open redirect
       const redirect = searchParams.get("redirect")
-      if (redirect) {
-        router.replace(redirect)
+      const safeRedirect =
+        redirect && redirect.startsWith("/") && !redirect.startsWith("//")
+          ? redirect
+          : null
+      if (safeRedirect) {
+        router.replace(safeRedirect)
         return
       }
 

@@ -78,13 +78,28 @@ export function usePasajeroRideRequest(userId: string | null): UsePasajeroRideRe
         if (status === "CHANNEL_ERROR") {
           console.error("Realtime channel error on ride_requests pasajero")
         }
+        // Tras desconexion (wifi drop) o cierre del canal, resincronizar
+        // desde BD para no quedarse pegado en un status stale (ej: el taxi
+        // completo el viaje mientras el pasajero estaba offline).
+        if (status === "CHANNEL_ERROR" || status === "CLOSED" || status === "TIMED_OUT") {
+          fetchActive()
+        }
       })
 
     channelRef.current = channel
 
+    // Resync al volver online (wifi drop) o al volver al foreground (tab change)
+    const handleResync = () => {
+      fetchActive()
+    }
+    window.addEventListener("online", handleResync)
+    document.addEventListener("visibilitychange", handleResync)
+
     return () => {
       supabase.removeChannel(channel as Parameters<typeof supabase.removeChannel>[0])
       channelRef.current = null
+      window.removeEventListener("online", handleResync)
+      document.removeEventListener("visibilitychange", handleResync)
     }
   }, [userId])
 

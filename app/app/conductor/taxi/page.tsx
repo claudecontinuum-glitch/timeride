@@ -222,10 +222,12 @@ export default function ConductorTaxiPage() {
         <button
           role="switch"
           aria-checked={available}
+          disabled={!position}
           onClick={() => setAvailable(!available)}
           className={[
             "relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+            !position ? "opacity-40 cursor-not-allowed" : "",
             available ? "bg-primary" : "bg-border",
           ].join(" ")}
           aria-label={available ? "Desactivar disponibilidad" : "Activar disponibilidad"}
@@ -239,6 +241,15 @@ export default function ConductorTaxiPage() {
           />
         </button>
       </div>
+
+      {!position && !available && (
+        <div className="px-4 py-2 bg-warning/10 border-b border-warning/30">
+          <p className="text-xs text-foreground flex items-center gap-1.5">
+            <span aria-hidden="true">📍</span>
+            Esperando ubicación... activa permisos de GPS para poder recibir rides.
+          </p>
+        </div>
+      )}
 
       {/* Error de geolocation */}
       {geoError && (
