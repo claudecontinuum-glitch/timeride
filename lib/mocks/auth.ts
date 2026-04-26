@@ -140,6 +140,45 @@ export async function createProfile(
 }
 
 /**
+ * Actualiza la info del vehiculo (placa, color, modelo, foto) de un taxista
+ * que ya tiene profile. Usado por taxistas con backfill 'PENDIENTE' para
+ * completar sus datos reales sin tener que borrar el perfil.
+ */
+export async function updateVehicleInfo(
+  userId: string,
+  data: {
+    license_plate: string | null
+    vehicle_color: string | null
+    vehicle_model?: string | null
+    photo_url?: string | null
+  }
+): Promise<{ success: boolean; error?: string; profile?: Profile }> {
+  const supabase = getSupabaseBrowser()
+
+  const { data: updated, error } = await supabase
+    .from("profiles")
+    .update({
+      license_plate: data.license_plate,
+      vehicle_color: data.vehicle_color,
+      vehicle_model: data.vehicle_model ?? null,
+      photo_url: data.photo_url ?? null,
+    })
+    .eq("user_id", userId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error("Failed to update vehicle info", error)
+    return {
+      success: false,
+      error: "No se pudo guardar la info del vehículo. Intenta de nuevo.",
+    }
+  }
+
+  return { success: true, profile: updated as Profile }
+}
+
+/**
  * Elimina el profile del usuario (para reset de rol).
  * La cuenta Supabase Auth queda — el usuario puede re-onboardear.
  */

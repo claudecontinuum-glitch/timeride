@@ -200,6 +200,9 @@ export function useRideRequests(
     const supabase = getSupabaseBrowser()
 
     try {
+      // Guard optimista: solo aceptamos si el ride sigue en pending.
+      // Si dos taxistas hacen click al mismo tiempo, solo uno gana — el otro
+      // recibe data=null y limpia su currentRequest.
       const { data, error } = await supabase
         .from("ride_requests")
         .update({
@@ -208,11 +211,19 @@ export function useRideRequests(
           accepted_at: new Date().toISOString(),
         })
         .eq("id", id)
+        .eq("status", "pending")
         .select()
-        .single()
+        .maybeSingle()
 
       if (error) {
         console.error("Failed to accept ride request", error)
+        return
+      }
+
+      if (!data) {
+        // Otro taxista acepto primero — soltamos la request del lado nuestro
+        setCurrentRequest(null)
+        currentRequestRef.current = null
         return
       }
 

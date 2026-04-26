@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth, createProfile } from "@/lib/mocks/auth"
+import { useAuth, createProfile, updateVehicleInfo } from "@/lib/mocks/auth"
 import { RoleCard } from "@/components/ui/RoleCard"
 import { Button } from "@/components/ui/Button"
 import type { Role } from "@/lib/types"
@@ -21,6 +21,14 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Detecta taxistas que tienen profile pero con datos placeholder (legado del pivote).
+  // Esos perfiles deben quedarse en onboarding step 2 hasta que ingresen datos reales.
+  const taxistaIncomplete =
+    profile?.role === "taxista" &&
+    (!profile.license_plate ||
+      profile.license_plate === "PENDIENTE" ||
+      profile.vehicle_color === "pendiente")
+
   // Si ya tiene profile completo, redirigir
   useEffect(() => {
     if (loading) return
@@ -28,11 +36,21 @@ export default function OnboardingPage() {
       router.replace("/login")
       return
     }
-    if (profile?.role) {
+    if (profile?.role && !taxistaIncomplete) {
       if (profile.role === "pasajero") router.replace("/app/pasajero")
       else router.replace("/app/conductor/taxi")
     }
-  }, [user, profile, loading, router])
+  }, [user, profile, loading, router, taxistaIncomplete])
+
+  // Para taxistas con datos pendientes, saltar directo al step de vehicle.
+  // Setea state post-await del fetch de profile; el linter no distingue, lo silenciamos.
+  useEffect(() => {
+    if (!taxistaIncomplete) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedRole("taxista")
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStep("vehicle")
+  }, [taxistaIncomplete])
 
   function handleContinueRole() {
     if (selectedRole === "pasajero") {
@@ -64,6 +82,24 @@ export default function OnboardingPage() {
     try {
       const nombre = user.email.split("@")[0]
 
+      // Caso A: taxista existente con datos placeholder, hace UPDATE
+      if (taxistaIncomplete) {
+        const result = await updateVehicleInfo(user.id, {
+          license_plate: licensePlate.trim().toUpperCase(),
+          vehicle_color: vehicleColor.trim(),
+          vehicle_model: vehicleModel.trim() || null,
+        })
+
+        if (!result.success) {
+          setError(result.error ?? "No se pudo actualizar tu vehículo.")
+          return
+        }
+
+        router.replace("/app/conductor/taxi")
+        return
+      }
+
+      // Caso B: usuario nuevo, hace INSERT
       const result = await createProfile(user.id, {
         user_id: user.id,
         nombre,
