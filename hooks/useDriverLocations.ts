@@ -42,6 +42,7 @@ export function useDriverLocations(
   const radiusRef = useRef(radiusM)
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const retryCountRef = useRef(0)
+  const fetchDriversRef = useRef<(() => Promise<void>) | null>(null)
 
   useEffect(() => {
     centerRef.current = center
@@ -114,16 +115,23 @@ export function useDriverLocations(
       // Retry exponencial: 2s, 4s, 8s, máximo 16s
       const delay = Math.min(2000 * 2 ** retryCountRef.current, 16000)
       retryCountRef.current++
-      retryTimeoutRef.current = setTimeout(fetchDrivers, delay)
+      retryTimeoutRef.current = setTimeout(() => {
+        fetchDriversRef.current?.()
+      }, delay)
     } finally {
       setLoading(false)
     }
   }, [center, radiusM])
 
   useEffect(() => {
+    fetchDriversRef.current = fetchDrivers
+  }, [fetchDrivers])
+
+  useEffect(() => {
     const supabase = getSupabaseBrowser()
 
-    // Carga inicial
+    // Carga inicial — fetchDrivers es async, setState pasa post-await.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDrivers()
 
     // Suscripción Realtime a cambios en driver_locations

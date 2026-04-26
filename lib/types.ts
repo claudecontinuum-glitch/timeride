@@ -1,10 +1,14 @@
-export type Role = "pasajero" | "conductor"
-
-export type VehicleType = "taxi" | "microbus" | "bus"
+export type Role = "pasajero" | "taxista"
 
 export type DriverStatus = "active" | "offline"
 
-export type RideRequestStatus = "pending" | "accepted" | "cancelled" | "completed"
+export type RideRequestStatus =
+  | "pending"
+  | "accepted"
+  | "en_route"
+  | "arrived"
+  | "completed"
+  | "cancelled"
 
 export interface Profile {
   id: string
@@ -12,7 +16,11 @@ export interface Profile {
   nombre: string
   telefono: string | null
   role: Role
-  vehicle_type: VehicleType | null
+  // Datos del vehiculo (solo si role === "taxista")
+  license_plate: string | null
+  vehicle_color: string | null
+  vehicle_model: string | null
+  photo_url: string | null
   role_locked_at: string | null
   created_at: string
 }
@@ -29,36 +37,6 @@ export interface DriverLocation {
   profile?: Profile
 }
 
-export interface RouteStop {
-  id: string
-  route_id: string
-  lat: number
-  lng: number
-  nombre_opcional: string | null
-  seq: number
-  recorded_at: string
-}
-
-export interface RoutePath {
-  id: string
-  route_id: string
-  lat: number
-  lng: number
-  seq: number
-  recorded_at: string
-}
-
-export interface Route {
-  id: string
-  driver_id: string
-  nombre: string
-  color: string
-  started_at: string
-  ended_at: string | null
-  stops?: RouteStop[]
-  path?: RoutePath[]
-}
-
 export interface RideRequest {
   id: string
   pasajero_id: string
@@ -69,6 +47,10 @@ export interface RideRequest {
   created_at: string
   accepted_at: string | null
   pasajero?: Pick<Profile, "nombre" | "telefono">
+  taxista?: Pick<
+    Profile,
+    "nombre" | "telefono" | "license_plate" | "vehicle_color" | "vehicle_model" | "photo_url"
+  >
 }
 
 export interface MockUser {

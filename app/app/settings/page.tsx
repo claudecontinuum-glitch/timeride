@@ -5,12 +5,6 @@ import { useRouter } from "next/navigation"
 import { useAuth, deleteProfile, signOut } from "@/lib/mocks/auth"
 import { Button } from "@/components/ui/Button"
 
-const VEHICLE_LABEL: Record<string, string> = {
-  taxi: "Taxi",
-  microbus: "Microbús",
-  bus: "Bus",
-}
-
 export default function SettingsPage() {
   const { user, profile } = useAuth()
   const router = useRouter()
@@ -43,12 +37,8 @@ export default function SettingsPage() {
     }
   }
 
-  const rolDisplay =
-    profile?.role === "pasajero"
-      ? "Pasajero"
-      : profile?.vehicle_type
-      ? `Conductor — ${VEHICLE_LABEL[profile.vehicle_type] ?? profile.vehicle_type}`
-      : "Conductor"
+  const rolDisplay = profile?.role === "taxista" ? "Taxista" : "Pasajero"
+  const isTaxista = profile?.role === "taxista"
 
   return (
     <div className="flex flex-col min-h-full px-4 py-6 bg-background">
@@ -77,6 +67,29 @@ export default function SettingsPage() {
             <ProfileRow label="Rol" value={rolDisplay} />
           </div>
         </section>
+
+        {isTaxista && (
+          <section
+            aria-labelledby="vehicle-section"
+            className="bg-surface rounded-2xl border border-border p-5 space-y-3 mb-6"
+          >
+            <h2
+              id="vehicle-section"
+              className="text-xs font-semibold text-muted-foreground uppercase tracking-wide"
+            >
+              Tu vehículo
+            </h2>
+
+            <div className="space-y-2">
+              <ProfileRow label="Placa" value={profile?.license_plate ?? "—"} />
+              <ProfileRow label="Color" value={profile?.vehicle_color ?? "—"} />
+              <ProfileRow
+                label="Modelo"
+                value={profile?.vehicle_model ?? "No configurado"}
+              />
+            </div>
+          </section>
+        )}
 
         {/* Zona de peligro */}
         <section

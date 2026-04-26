@@ -50,10 +50,8 @@ function LoginForm() {
 
       if (profile.role === "pasajero") {
         router.replace("/app/pasajero")
-      } else if (profile.vehicle_type === "taxi") {
-        router.replace("/app/conductor/taxi")
       } else {
-        router.replace("/app/conductor/bus")
+        router.replace("/app/conductor/taxi")
       }
     } catch (err) {
       console.error("Login failed", err)

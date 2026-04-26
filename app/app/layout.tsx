@@ -14,14 +14,7 @@ function NavBar() {
     router.replace("/login")
   }
 
-  const roleLabel =
-    profile?.role === "conductor"
-      ? profile.vehicle_type === "taxi"
-        ? "Taxista"
-        : profile.vehicle_type === "microbus"
-        ? "Microbusero"
-        : "Busero"
-      : "Pasajero"
+  const roleLabel = profile?.role === "taxista" ? "Taxista" : "Pasajero"
 
   return (
     <nav className="flex items-center justify-between px-4 py-3 bg-surface border-b border-border">

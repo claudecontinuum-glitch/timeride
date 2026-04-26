@@ -24,6 +24,10 @@ interface UseRideRequestsReturn {
   currentRequest: RideRequest | null
   acceptRequest: (id: string, taxistaId: string) => Promise<void>
   rejectRequest: (id: string) => void
+  markEnRoute: (id: string) => Promise<void>
+  markArrived: (id: string) => Promise<void>
+  markCompleted: (id: string) => Promise<void>
+  cancelByTaxista: (id: string) => Promise<void>
 }
 
 /**
@@ -225,11 +229,50 @@ export function useRideRequests(
     currentRequestRef.current = null
   }, [])
 
+  const updateStatus = useCallback(
+    async (id: string, newStatus: RideRequest["status"]) => {
+      const supabase = getSupabaseBrowser()
+      try {
+        const { data, error } = await supabase
+          .from("ride_requests")
+          .update({ status: newStatus })
+          .eq("id", id)
+          .select()
+          .single()
+
+        if (error) {
+          console.error(`Failed to update ride to ${newStatus}`, error)
+          return
+        }
+
+        if (newStatus === "completed" || newStatus === "cancelled") {
+          setCurrentRequest(null)
+          currentRequestRef.current = null
+        } else {
+          setCurrentRequest(data as RideRequest)
+          currentRequestRef.current = data as RideRequest
+        }
+      } catch (err) {
+        console.error(`Unexpected error updating ride to ${newStatus}`, err)
+      }
+    },
+    []
+  )
+
+  const markEnRoute = useCallback((id: string) => updateStatus(id, "en_route"), [updateStatus])
+  const markArrived = useCallback((id: string) => updateStatus(id, "arrived"), [updateStatus])
+  const markCompleted = useCallback((id: string) => updateStatus(id, "completed"), [updateStatus])
+  const cancelByTaxista = useCallback((id: string) => updateStatus(id, "cancelled"), [updateStatus])
+
   return {
     available,
     setAvailable,
     currentRequest,
     acceptRequest,
     rejectRequest,
+    markEnRoute,
+    markArrived,
+    markCompleted,
+    cancelByTaxista,
   }
 }

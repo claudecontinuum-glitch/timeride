@@ -121,9 +121,12 @@ export async function createProfile(
     .insert({
       user_id: userId,
       role: profileData.role,
-      vehicle_type: profileData.vehicle_type ?? null,
       nombre: profileData.nombre,
       telefono: profileData.telefono ?? null,
+      license_plate: profileData.license_plate ?? null,
+      vehicle_color: profileData.vehicle_color ?? null,
+      vehicle_model: profileData.vehicle_model ?? null,
+      photo_url: profileData.photo_url ?? null,
     })
     .select()
     .single()

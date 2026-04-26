@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/mocks/auth"
 import { useToast } from "@/components/ui/Toast"
 import { getSupabaseBrowser } from "@/lib/supabase"
 import { RideRequestPopup } from "@/components/conductor/RideRequestPopup"
+import { Button } from "@/components/ui/Button"
 import { SIGUA_CENTER } from "@/lib/constants"
 import { Marker, Polyline } from "react-leaflet"
 import L from "leaflet"
@@ -61,8 +62,17 @@ export default function ConductorTaxiPage() {
   const { position, error: geoError } = useGeolocation({ fallbackToCenter: true })
   const { user } = useAuth()
   const { addToast } = useToast()
-  const { available, setAvailable, currentRequest, acceptRequest, rejectRequest } =
-    useRideRequests(position)
+  const {
+    available,
+    setAvailable,
+    currentRequest,
+    acceptRequest,
+    rejectRequest,
+    markEnRoute,
+    markArrived,
+    markCompleted,
+    cancelByTaxista,
+  } = useRideRequests(position)
 
   // Actualizar driver_locations en Supabase cuando la posición cambia y está disponible
   useEffect(() => {
@@ -164,6 +174,33 @@ export default function ConductorTaxiPage() {
       : null
 
   const isRequestAccepted = currentRequest?.status === "accepted"
+  const isEnRoute = currentRequest?.status === "en_route"
+  const hasArrived = currentRequest?.status === "arrived"
+  const inActiveTrip = isRequestAccepted || isEnRoute || hasArrived
+
+  const handleMarkEnRoute = useCallback(async () => {
+    if (!currentRequest) return
+    await markEnRoute(currentRequest.id)
+    addToast("En ruta al pasajero", "info")
+  }, [currentRequest, markEnRoute, addToast])
+
+  const handleMarkArrived = useCallback(async () => {
+    if (!currentRequest) return
+    await markArrived(currentRequest.id)
+    addToast("Marcaste que llegaste al pasajero", "info")
+  }, [currentRequest, markArrived, addToast])
+
+  const handleMarkCompleted = useCallback(async () => {
+    if (!currentRequest) return
+    await markCompleted(currentRequest.id)
+    addToast("Viaje completado", "success")
+  }, [currentRequest, markCompleted, addToast])
+
+  const handleCancelByTaxista = useCallback(async () => {
+    if (!currentRequest) return
+    await cancelByTaxista(currentRequest.id)
+    addToast("Viaje cancelado", "info")
+  }, [currentRequest, cancelByTaxista, addToast])
 
   return (
     <div className="flex flex-col h-full">
@@ -273,21 +310,74 @@ export default function ConductorTaxiPage() {
         />
       )}
 
-      {/* Card de ride aceptado */}
-      {currentRequest && isRequestAccepted && (
-        <div className="bg-success/10 border-t-2 border-success px-4 py-3 flex items-center gap-3">
-          <span className="text-xl" aria-hidden="true">🚕</span>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-foreground">
-              Ve al punto de recogida
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {currentRequest.pasajero?.nombre ?? "Pasajero"} te está esperando · {
-                distanceToPickup < 1000
-                  ? `${Math.round(distanceToPickup)} m`
-                  : `${(distanceToPickup / 1000).toFixed(1)} km`
-              }
-            </p>
+      {/* Panel de acciones segun estado del viaje */}
+      {currentRequest && inActiveTrip && (
+        <div className="bg-surface border-t-2 border-success px-4 py-3 space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="text-xl" aria-hidden="true">🚕</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground truncate">
+                {currentRequest.pasajero?.nombre ?? "Pasajero"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {distanceToPickup < 1000
+                  ? `${Math.round(distanceToPickup)} m al pickup`
+                  : `${(distanceToPickup / 1000).toFixed(1)} km al pickup`}
+                {" · "}
+                {isRequestAccepted && "Aceptado"}
+                {isEnRoute && "En ruta"}
+                {hasArrived && "Llegaste"}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {isRequestAccepted && (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleCancelByTaxista}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleMarkEnRoute}
+                >
+                  Voy en camino
+                </Button>
+              </>
+            )}
+            {isEnRoute && (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleCancelByTaxista}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleMarkArrived}
+                >
+                  Llegué al pickup
+                </Button>
+              </>
+            )}
+            {hasArrived && (
+              <Button
+                variant="primary"
+                size="sm"
+                className="col-span-2"
+                onClick={handleMarkCompleted}
+              >
+                Finalizar viaje
+              </Button>
+            )}
           </div>
         </div>
       )}

@@ -9,7 +9,7 @@ interface BottomSheetProps {
   title?: string
   /**
    * blockBackground: cuando es true (default: false) agrega backdrop semiopaco.
-   * Para el sheet de detalle de bus/microbus NO queremos bloquear el mapa.
+   * Para el sheet de detalle del taxi NO queremos bloquear el mapa.
    * Para confirmaciones (pedir ride) sí queremos.
    */
   blockBackground?: boolean

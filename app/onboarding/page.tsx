@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAuth, createProfile } from "@/lib/mocks/auth"
 import { RoleCard } from "@/components/ui/RoleCard"
 import { Button } from "@/components/ui/Button"
-import type { Role, VehicleType } from "@/lib/types"
+import type { Role } from "@/lib/types"
 
 type Step = "role" | "vehicle"
 
@@ -15,7 +15,9 @@ export default function OnboardingPage() {
 
   const [step, setStep] = useState<Step>("role")
   const [selectedRole, setSelectedRole] = useState<Role | null>(null)
-  const [selectedVehicle, setSelectedVehicle] = useState<VehicleType | null>(null)
+  const [licensePlate, setLicensePlate] = useState("")
+  const [vehicleColor, setVehicleColor] = useState("")
+  const [vehicleModel, setVehicleModel] = useState("")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -28,14 +30,33 @@ export default function OnboardingPage() {
     }
     if (profile?.role) {
       if (profile.role === "pasajero") router.replace("/app/pasajero")
-      else if (profile.vehicle_type === "taxi") router.replace("/app/conductor/taxi")
-      else router.replace("/app/conductor/bus")
+      else router.replace("/app/conductor/taxi")
     }
   }, [user, profile, loading, router])
 
+  function handleContinueRole() {
+    if (selectedRole === "pasajero") {
+      handleFinish()
+    } else if (selectedRole === "taxista") {
+      setStep("vehicle")
+    }
+  }
+
   async function handleFinish() {
     if (!user || !selectedRole) return
-    if (selectedRole === "conductor" && !selectedVehicle) return
+
+    if (selectedRole === "taxista") {
+      const plate = licensePlate.trim().toUpperCase()
+      const color = vehicleColor.trim()
+      if (plate.length < 3) {
+        setError("Ingresa una placa válida.")
+        return
+      }
+      if (color.length < 3) {
+        setError("Ingresa un color del vehículo.")
+        return
+      }
+    }
 
     setSaving(true)
     setError(null)
@@ -48,7 +69,15 @@ export default function OnboardingPage() {
         nombre,
         telefono: null,
         role: selectedRole,
-        vehicle_type: selectedRole === "conductor" ? selectedVehicle : null,
+        license_plate:
+          selectedRole === "taxista" ? licensePlate.trim().toUpperCase() : null,
+        vehicle_color:
+          selectedRole === "taxista" ? vehicleColor.trim() : null,
+        vehicle_model:
+          selectedRole === "taxista" && vehicleModel.trim()
+            ? vehicleModel.trim()
+            : null,
+        photo_url: null,
       })
 
       if (!result.success) {
@@ -56,13 +85,10 @@ export default function OnboardingPage() {
         return
       }
 
-      // Redirigir según rol
       if (selectedRole === "pasajero") {
         router.replace("/app/pasajero")
-      } else if (selectedVehicle === "taxi") {
-        router.replace("/app/conductor/taxi")
       } else {
-        router.replace("/app/conductor/bus")
+        router.replace("/app/conductor/taxi")
       }
     } catch (err) {
       console.error("Failed to create profile", err)
@@ -94,12 +120,12 @@ export default function OnboardingPage() {
           <h1 className="text-xl font-bold text-foreground mt-4">
             {step === "role"
               ? "Bienvenido. ¿Cómo vas a usar la app?"
-              : "¿Qué tipo de vehículo manejas?"}
+              : "Datos de tu vehículo"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {step === "role"
-              ? "Esta decisión no se puede cambiar. Para cambiar de rol, debes crear una nueva cuenta."
-              : "Elige el tipo de transporte que operas."}
+              ? "Esta decisión no se puede cambiar. Para cambiar de rol, debes borrar tu perfil."
+              : "Los pasajeros ven estos datos cuando aceptas un viaje. Tienen que coincidir con la realidad."}
           </p>
 
           {/* Progress */}
@@ -119,45 +145,83 @@ export default function OnboardingPage() {
           <div className="space-y-3 flex-1">
             <RoleCard
               title="Pasajero"
-              description="Quiero ver conductores cercanos y pedir taxis."
+              description="Quiero ver taxis cercanos y pedir un viaje cuando lo necesite."
               icon="🧍"
               selected={selectedRole === "pasajero"}
               onClick={() => setSelectedRole("pasajero")}
             />
             <RoleCard
-              title="Conductor"
-              description="Opero un taxi, microbus o bus y quiero publicar mi ruta."
-              icon="🚗"
-              selected={selectedRole === "conductor"}
-              onClick={() => setSelectedRole("conductor")}
+              title="Taxista"
+              description="Manejo un taxi y quiero recibir solicitudes de pasajeros cercanos."
+              icon="🚕"
+              selected={selectedRole === "taxista"}
+              onClick={() => setSelectedRole("taxista")}
             />
           </div>
         )}
 
-        {/* Paso 2: elegir tipo de vehículo */}
+        {/* Paso 2: datos del vehiculo (solo taxistas) */}
         {step === "vehicle" && (
-          <div className="space-y-3 flex-1">
-            <RoleCard
-              title="Taxi"
-              description="Recibo solicitudes de ride de pasajeros."
-              icon="🚕"
-              selected={selectedVehicle === "taxi"}
-              onClick={() => setSelectedVehicle("taxi")}
-            />
-            <RoleCard
-              title="Microbus"
-              description="Publico mi ruta y paradas en tiempo real."
-              icon="🚐"
-              selected={selectedVehicle === "microbus"}
-              onClick={() => setSelectedVehicle("microbus")}
-            />
-            <RoleCard
-              title="Bus"
-              description="Publico mi ruta y paradas en tiempo real."
-              icon="🚌"
-              selected={selectedVehicle === "bus"}
-              onClick={() => setSelectedVehicle("bus")}
-            />
+          <div className="space-y-4 flex-1">
+            <div>
+              <label
+                htmlFor="plate"
+                className="block text-sm font-medium text-foreground mb-1.5"
+              >
+                Placa del taxi
+              </label>
+              <input
+                id="plate"
+                type="text"
+                inputMode="text"
+                autoCapitalize="characters"
+                maxLength={10}
+                value={licensePlate}
+                onChange={(e) => setLicensePlate(e.target.value)}
+                placeholder="HBA 1234"
+                className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-foreground
+                           placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50
+                           transition-colors text-base uppercase tracking-wider"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="color"
+                className="block text-sm font-medium text-foreground mb-1.5"
+              >
+                Color del vehículo
+              </label>
+              <input
+                id="color"
+                type="text"
+                value={vehicleColor}
+                onChange={(e) => setVehicleColor(e.target.value)}
+                placeholder="Blanco, amarillo, rojo..."
+                className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-foreground
+                           placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50
+                           transition-colors text-base"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="model"
+                className="block text-sm font-medium text-foreground mb-1.5"
+              >
+                Modelo <span className="text-muted-foreground font-normal">(opcional)</span>
+              </label>
+              <input
+                id="model"
+                type="text"
+                value={vehicleModel}
+                onChange={(e) => setVehicleModel(e.target.value)}
+                placeholder="Toyota Yaris, Hyundai Accent..."
+                className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-foreground
+                           placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50
+                           transition-colors text-base"
+              />
+            </div>
           </div>
         )}
 
@@ -167,31 +231,18 @@ export default function OnboardingPage() {
           </p>
         )}
 
-        {/* Footer con acciones */}
+        {/* Footer */}
         <div className="mt-8 space-y-3">
           {step === "role" && (
-            <>
-              {selectedRole === "conductor" ? (
-                <Button
-                  size="lg"
-                  className="w-full"
-                  disabled={!selectedRole}
-                  onClick={() => setStep("vehicle")}
-                >
-                  Continuar
-                </Button>
-              ) : (
-                <Button
-                  size="lg"
-                  className="w-full"
-                  disabled={!selectedRole}
-                  onClick={handleFinish}
-                  loading={saving}
-                >
-                  Confirmar
-                </Button>
-              )}
-            </>
+            <Button
+              size="lg"
+              className="w-full"
+              disabled={!selectedRole}
+              loading={saving}
+              onClick={handleContinueRole}
+            >
+              {selectedRole === "taxista" ? "Continuar" : "Confirmar"}
+            </Button>
           )}
 
           {step === "vehicle" && (
@@ -199,7 +250,7 @@ export default function OnboardingPage() {
               <Button
                 size="lg"
                 className="w-full"
-                disabled={!selectedVehicle}
+                disabled={!licensePlate.trim() || !vehicleColor.trim()}
                 onClick={handleFinish}
                 loading={saving}
               >

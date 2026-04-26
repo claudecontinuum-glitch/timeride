@@ -32,7 +32,7 @@ export function usePasajeroRideRequest(userId: string | null): UsePasajeroRideRe
         .from("ride_requests")
         .select("*")
         .eq("pasajero_id", userId)
-        .in("status", ["pending", "accepted"])
+        .in("status", ["pending", "accepted", "en_route", "arrived"])
         .order("created_at", { ascending: false })
         .limit(1)
         .single()
@@ -63,12 +63,14 @@ export function usePasajeroRideRequest(userId: string | null): UsePasajeroRideRe
         },
         (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           const newRow = payload.new as Record<string, unknown>
+          const newStatus = newRow["status"] as RideRequest["status"]
           setActiveRide((prev) => {
             if (!prev) return null
-            if (prev.id === newRow["id"]) {
-              return { ...prev, ...(newRow as Partial<RideRequest>) }
+            if (prev.id !== newRow["id"]) return prev
+            if (newStatus === "completed" || newStatus === "cancelled") {
+              return null
             }
-            return prev
+            return { ...prev, ...(newRow as Partial<RideRequest>) }
           })
         }
       )
