@@ -23,45 +23,67 @@ function NavBar({ pathname }: { pathname: string }) {
   const isOnHome = pathname === homePath
 
   return (
-    <nav className="flex items-center justify-between px-3 py-2 bg-surface border-b border-border">
-      <div className="flex items-center gap-2 min-w-0">
+    <nav
+      className="glass-surface flex items-center justify-between px-4 py-3 relative z-30"
+      style={{ borderRadius: 0, borderTop: "none", borderLeft: "none", borderRight: "none" }}
+    >
+      <div className="flex items-center gap-3 min-w-0">
         {!isOnHome ? (
           <Link
             href={homePath}
             aria-label="Volver al mapa"
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-foreground rounded-xl hover:bg-surface-hover transition-colors gap-1 px-2"
+            className="min-w-[40px] min-h-[40px] flex items-center justify-center text-foreground/80 hover:text-foreground rounded-lg hover:bg-white/5 transition-colors"
           >
-            <span aria-hidden="true" className="text-lg">←</span>
-            <span className="text-sm font-medium">Mapa</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
           </Link>
         ) : (
-          <Link
-            href={homePath}
-            aria-label="TimeRide"
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center"
-          >
-            <span className="text-xl" aria-hidden="true">🚦</span>
+          <Link href={homePath} aria-label="TimeRide" className="flex flex-col leading-none">
+            <span
+              className="font-display text-foreground text-xl font-semibold"
+              style={{ letterSpacing: "0.12em" }}
+            >
+              TIMERIDE
+            </span>
+            <span className="font-sans text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
+              <span
+                className="inline-block w-1.5 h-1.5 rounded-full bg-primary"
+                style={{ boxShadow: "0 0 6px var(--color-primary-glow)" }}
+                aria-hidden="true"
+              />
+              <span className="truncate max-w-[120px]">
+                {profile?.nombre ?? user?.email?.split("@")[0] ?? "—"}
+              </span>
+              <span className="text-tertiary-foreground">·</span>
+              <span>{roleLabel}</span>
+            </span>
           </Link>
         )}
-        <div className="leading-tight min-w-0">
-          <p className="text-sm font-semibold text-foreground truncate max-w-[140px]">
-            {profile?.nombre ?? user?.email?.split("@")[0] ?? "Usuario"}
-          </p>
-          <p className="text-xs text-muted-foreground">{roleLabel}</p>
-        </div>
+        {!isOnHome && (
+          <div className="leading-tight min-w-0">
+            <p className="font-sans text-sm font-semibold text-foreground truncate max-w-[140px]">
+              {profile?.nombre ?? user?.email?.split("@")[0] ?? "Usuario"}
+            </p>
+            <p className="font-sans text-xs text-muted-foreground">{roleLabel}</p>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-1">
         <Link
           href="/app/settings"
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-xl hover:bg-surface-hover transition-colors"
+          className="min-w-[40px] min-h-[40px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-lg hover:bg-white/5 transition-colors"
           aria-label="Configuración"
         >
-          ⚙️
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
         </Link>
         <button
           onClick={handleLogout}
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-sm text-muted-foreground hover:text-foreground rounded-xl hover:bg-surface-hover transition-colors px-2"
+          className="min-w-[40px] min-h-[40px] flex items-center justify-center text-xs font-sans text-muted-foreground hover:text-foreground rounded-lg hover:bg-white/5 transition-colors px-3"
           aria-label="Cerrar sesión"
         >
           Salir
@@ -88,13 +110,11 @@ export default function AppLayout({
       return
     }
 
-    // Sin profile → onboarding
     if (!profile) {
       router.replace("/onboarding")
       return
     }
 
-    // Role guard: cada rol solo puede ver su propia pantalla principal
     if (profile.role === "pasajero" && pathname.startsWith("/app/conductor")) {
       router.replace("/app/pasajero")
       return
@@ -108,7 +128,7 @@ export default function AppLayout({
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center bg-background">
-        <p className="text-muted-foreground text-sm">Cargando...</p>
+        <p className="font-sans text-muted-foreground text-sm">Cargando...</p>
       </div>
     )
   }
@@ -118,7 +138,7 @@ export default function AppLayout({
   return (
     <div className="flex flex-col h-full bg-background">
       <NavBar pathname={pathname} />
-      <main className="flex-1 overflow-hidden">{children}</main>
+      <main className="flex-1 overflow-hidden relative">{children}</main>
     </div>
   )
 }

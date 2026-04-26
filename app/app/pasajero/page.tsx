@@ -235,47 +235,48 @@ export default function PasajeroPage() {
 
       {/* CTA flotante "Pedir taxi" — solo cuando no hay ride activo, ningun sheet abierto y no hay confirm en curso */}
       {!hasActiveRide && drivers.length > 0 && !sheetOpen && !rideConfirmOpen && (
-        <div className="absolute bottom-0 left-0 right-0 z-[1000] p-4">
+        <div className="absolute bottom-0 left-0 right-0 z-[100] p-4">
           <Button
             size="lg"
-            className="w-full max-w-sm mx-auto shadow-xl"
+            className="w-full max-w-sm mx-auto shadow-2xl"
             onClick={() => setRideConfirmOpen(true)}
           >
-            🚕  Pedir taxi aquí
+            Pedir taxi aquí
           </Button>
         </div>
       )}
 
       {/* Card de ride activo */}
       {hasActiveRide && activeRide && (
-        <div className="absolute bottom-0 left-0 right-0 z-[1000] p-4 animate-slide-up">
+        <div className="absolute bottom-0 left-0 right-0 z-[100] p-4 animate-slide-up">
           <div
             className={[
-              "rounded-2xl border-2 shadow-xl px-4 py-4 max-w-sm mx-auto",
-              activeRide.status === "pending"
-                ? "bg-surface border-primary/40"
-                : activeRide.status === "arrived"
-                ? "bg-success/15 border-success"
-                : "bg-success/10 border-success",
+              "glass-surface rounded-2xl px-4 py-4 max-w-sm mx-auto",
             ].join(" ")}
           >
+            {/* Status pill — pulse dot */}
             <div className="flex items-center justify-between gap-3 mb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xl" aria-hidden="true">
-                  {activeRide.status === "pending"
-                    ? "⏳"
-                    : activeRide.status === "arrived"
-                    ? "✅"
-                    : "🚕"}
-                </span>
-                <p className="font-semibold text-foreground">
+              <div className="glass-pill flex items-center gap-2 rounded-full px-3 py-1.5">
+                <span
+                  className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-pulse-glow"
+                  aria-hidden="true"
+                />
+                <span
+                  className="font-mono text-[10px] font-semibold uppercase text-foreground"
+                  style={{ letterSpacing: "0.08em" }}
+                >
                   {STATUS_LABEL[activeRide.status]}
-                </p>
+                </span>
               </div>
               {eta && taxiHighlightedStatus && (
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground leading-none">Llega en</p>
-                  <p className="text-sm font-bold text-foreground leading-tight">
+                <div className="text-right" style={{ animation: "stagger-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both" }}>
+                  <p className="font-sans text-[10px] text-muted-foreground leading-none uppercase" style={{ letterSpacing: "0.06em" }}>
+                    Llega en
+                  </p>
+                  <p
+                    className="font-mono text-2xl font-bold text-foreground leading-tight mt-1"
+                    style={{ textShadow: "0 0 12px var(--color-primary-glow)" }}
+                  >
                     {eta.etaLabel}
                   </p>
                 </div>
@@ -283,40 +284,61 @@ export default function PasajeroPage() {
             </div>
 
             {taxiLocation?.profile && taxiHighlightedStatus && (
-              <div className="bg-surface rounded-xl border border-border p-3 mb-3 flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-xl flex-shrink-0">
-                  {taxiLocation.profile.photo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={taxiLocation.profile.photo_url}
-                      alt={taxiLocation.profile.nombre}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span aria-hidden="true">
-                      {taxiLocation.profile.nombre.charAt(0).toUpperCase()}
-                    </span>
-                  )}
+              <div
+                className="flex items-center gap-3 pt-3 border-t border-border"
+                style={{ animation: "stagger-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both" }}
+              >
+                {/* Avatar con gradient ring que rota */}
+                <div className="relative flex-shrink-0">
+                  <div
+                    className="absolute inset-0 rounded-full animate-rotate-slow"
+                    style={{
+                      background: "conic-gradient(from 0deg, var(--color-primary), var(--color-violet), var(--color-primary))",
+                      padding: "2px",
+                    }}
+                  >
+                    <div className="w-full h-full rounded-full bg-surface" />
+                  </div>
+                  <div className="relative w-12 h-12 rounded-full bg-surface-elevated flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {taxiLocation.profile.photo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={taxiLocation.profile.photo_url}
+                        alt={taxiLocation.profile.nombre}
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span
+                        className="font-display text-base font-semibold text-foreground"
+                        aria-hidden="true"
+                      >
+                        {taxiLocation.profile.nombre.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">
+                  <p className="font-display text-base font-semibold text-foreground truncate leading-tight">
                     {taxiLocation.profile.nombre}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p
+                    className="font-mono text-[11px] text-muted-foreground uppercase mt-0.5"
+                    style={{ letterSpacing: "0.06em" }}
+                  >
                     {taxiLocation.profile.vehicle_color ?? "—"}
-                    {taxiLocation.profile.license_plate
-                      ? ` · ${taxiLocation.profile.license_plate}`
-                      : ""}
+                    {taxiLocation.profile.license_plate ? ` · ${taxiLocation.profile.license_plate}` : ""}
                   </p>
                   {taxiLocation.profile.vehicle_model && (
-                    <p className="text-[11px] text-muted-foreground truncate">
+                    <p className="font-sans text-[11px] text-tertiary-foreground truncate mt-0.5">
                       {taxiLocation.profile.vehicle_model}
                     </p>
                   )}
                 </div>
                 {eta && (
-                  <div className="text-right text-xs text-muted-foreground flex-shrink-0">
-                    {eta.distanceLabel}
+                  <div className="text-right flex-shrink-0">
+                    <p className="font-mono text-[11px] text-muted-foreground">
+                      {eta.distanceLabel}
+                    </p>
                   </div>
                 )}
               </div>
@@ -326,7 +348,7 @@ export default function PasajeroPage() {
               <Button
                 variant="secondary"
                 size="sm"
-                className="w-full mt-1"
+                className="w-full mt-3"
                 onClick={handleCancelRide}
               >
                 Cancelar solicitud

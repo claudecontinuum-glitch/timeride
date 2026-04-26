@@ -4,37 +4,48 @@
 @import "leaflet/dist/leaflet.css";
 
 @theme inline {
-  /* Colores base */
-  --color-background: oklch(0.99 0 0);
-  --color-foreground: oklch(0.13 0.02 265);
-  --color-surface: oklch(1 0 0);
-  --color-surface-hover: oklch(0.96 0.01 265);
-  --color-border: oklch(0.9 0.01 265);
-  --color-muted-foreground: oklch(0.55 0.02 265);
+  /* === TimeRide Design System v1 === */
+  /* Tokens del DESIGN.md — paleta dark editorial con accent cyan */
 
-  /* Acento primario: indigo-600 */
-  --color-primary: oklch(0.51 0.22 264);
-  --color-primary-foreground: oklch(0.99 0 0);
+  /* Backgrounds */
+  --color-background: #0a0a0c;
+  --color-foreground: #f5f5f7;
+  --color-surface: #13131a;
+  --color-surface-hover: #1a1a22;
+  --color-surface-elevated: #1f1f28;
 
-  /* Secundario */
-  --color-secondary: oklch(0.93 0.02 265);
-  --color-secondary-foreground: oklch(0.25 0.04 265);
+  /* Borders */
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
+  --color-border-glow: rgba(0, 255, 240, 0.18);
 
-  /* Peligro */
-  --color-danger: oklch(0.55 0.22 28);
-  --color-danger-foreground: oklch(0.99 0 0);
+  /* Text */
+  --color-muted-foreground: #9ca3a3;
+  --color-tertiary-foreground: #5e6166;
 
-  /* Éxito */
-  --color-success: oklch(0.55 0.17 155);
-  --color-success-foreground: oklch(0.99 0 0);
+  /* Accents */
+  --color-primary: #00fff0;            /* cyan electrico */
+  --color-primary-foreground: #0a0a0c;
+  --color-primary-glow: rgba(0, 255, 240, 0.35);
+  --color-violet: #b388ff;             /* segundo color del gradient cyan→violet */
 
-  /* Acentos por tipo de vehiculo */
-  --color-vehicle-taxi: oklch(0.78 0.17 85);       /* amber */
-  --color-vehicle-microbus: oklch(0.6 0.17 160);   /* emerald */
-  --color-vehicle-bus: oklch(0.51 0.22 264);        /* indigo */
+  /* Vehicle */
+  --color-taxi-yellow: #facc15;
 
-  /* Tipografia: sans del sistema — cero dependencias externas */
-  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Estados */
+  --color-secondary: #1f1f28;
+  --color-secondary-foreground: #f5f5f7;
+  --color-success: #22d39c;
+  --color-success-foreground: #0a0a0c;
+  --color-danger: #ff5d6c;
+  --color-danger-foreground: #ffffff;
+  --color-warning: #fbbf24;
+  --color-warning-foreground: #0a0a0c;
+
+  /* Tipografia (cargada via next/font/google en layout.tsx) */
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, monospace;
 
   /* Radio */
   --radius: 0.75rem;
@@ -43,9 +54,14 @@
   --radius-2xl: 1.25rem;
 
   /* Animaciones */
-  --animate-slide-up: slide-up 0.25s ease-out;
-  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-slide-up: slide-up 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-pulse-glow: pulse-glow 1.6s ease-in-out infinite;
+  --animate-rotate-slow: rotate-slow 8s linear infinite;
+  --animate-stagger-up: stagger-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+/* === Keyframes === */
 
 @keyframes slide-up {
   from {
@@ -63,9 +79,46 @@
   to { opacity: 1; }
 }
 
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.4;
+    box-shadow: 0 0 0 0 var(--color-primary-glow);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+@keyframes rotate-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes stagger-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes taxi-pulse-halo {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--color-primary-glow), 0 4px 14px rgba(0, 0, 0, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 14px transparent, 0 4px 14px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* === Reset + base === */
+
 :root {
-  --background: oklch(0.99 0 0);
-  --foreground: oklch(0.13 0.02 265);
+  color-scheme: dark;
 }
 
 *,
@@ -76,30 +129,74 @@
 
 html {
   height: 100%;
-  /* Previene zoom al hacer focus en inputs en iOS */
   -webkit-text-size-adjust: 100%;
 }
 
 body {
   height: 100%;
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
   font-family: var(--font-sans);
   margin: 0;
-  /* Smooth scrolling en mobile */
   -webkit-overflow-scrolling: touch;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* El mapa necesita height explícita y z-index controlado */
+/* === Glass primitive === */
+/* Aplicar a headers, status pills, sheets que floten sobre el mapa */
+
+.glass-surface {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--color-border);
+  border-top-color: var(--color-border-glow);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid var(--color-border);
+}
+
+/* === Leaflet z-index controlado === */
+
 .leaflet-container {
-  z-index: 10;
+  z-index: 1;
+  background: #0a0a0c;
 }
 
-/* El bottom-sheet de detalle debe quedar sobre el mapa */
 .leaflet-pane {
   z-index: 10;
 }
+
 .leaflet-top,
 .leaflet-bottom {
   z-index: 20;
+}
+
+/* Atribuciones de Leaflet — sutiles en dark mode */
+.leaflet-control-attribution {
+  background: rgba(10, 10, 12, 0.6) !important;
+  color: var(--color-tertiary-foreground) !important;
+  font-size: 9px !important;
+  backdrop-filter: blur(8px);
+}
+
+.leaflet-control-attribution a {
+  color: var(--color-muted-foreground) !important;
+}
+
+.leaflet-control-zoom a {
+  background: rgba(19, 19, 26, 0.85) !important;
+  color: var(--color-foreground) !important;
+  border: 1px solid var(--color-border) !important;
+  backdrop-filter: blur(12px);
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--color-surface-elevated) !important;
 }

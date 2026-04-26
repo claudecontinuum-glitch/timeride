@@ -11,13 +11,23 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<Variant, string> = {
   primary:
-    "bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80",
+    "bg-primary text-primary-foreground hover:opacity-90 active:opacity-80",
   secondary:
-    "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+    "bg-surface-elevated text-foreground hover:bg-surface-hover border border-border-strong",
   danger:
-    "bg-danger text-danger-foreground hover:bg-danger/90 active:bg-danger/80",
-  ghost:
-    "bg-transparent text-foreground hover:bg-surface-hover",
+    "bg-danger text-danger-foreground hover:opacity-90 active:opacity-80",
+  ghost: "bg-transparent text-foreground hover:bg-white/5",
+}
+
+const variantStyle: Record<Variant, React.CSSProperties> = {
+  primary: {
+    boxShadow: "0 0 0 1px rgba(0, 255, 240, 0.4), 0 4px 16px rgba(0, 255, 240, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
+  },
+  secondary: {},
+  danger: {
+    boxShadow: "0 4px 14px rgba(255, 93, 108, 0.3)",
+  },
+  ghost: {},
 }
 
 const sizeClasses: Record<Size, string> = {
@@ -35,6 +45,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       disabled,
       className = "",
       children,
+      style,
       ...props
     },
     ref
@@ -44,13 +55,14 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={[
-          "inline-flex items-center justify-center gap-2 rounded-xl font-medium",
-          "transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2",
-          "focus-visible:ring-primary/50 disabled:opacity-50 disabled:pointer-events-none",
+          "inline-flex items-center justify-center gap-2 rounded-xl font-sans font-medium",
+          "transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2",
+          "focus-visible:ring-primary/50 disabled:opacity-40 disabled:pointer-events-none",
           variantClasses[variant],
           sizeClasses[size],
           className,
         ].join(" ")}
+        style={{ ...variantStyle[variant], ...style }}
         {...props}
       >
         {loading ? (
