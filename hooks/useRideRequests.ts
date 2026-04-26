@@ -109,15 +109,20 @@ export function useRideRequests(
       .on(
         "postgres_changes",
         {
+          // Filter server-side eliminado intencionalmente: requiere
+          // REPLICA IDENTITY FULL en la tabla. Filtramos client-side abajo.
           event: "INSERT",
           schema: "public",
           table: "ride_requests",
-          filter: "status=eq.pending",
         },
         (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+          const row = payload.new as Record<string, unknown>
+
+          // Guard client-side: solo procesamos rides pending
+          if (row["status"] !== "pending") return
+
           if (currentRequestRef.current) return
 
-          const row = payload.new as Record<string, unknown>
           const { lat, lng } = positionRef.current
           const pickupLat = row["pickup_lat"] as number
           const pickupLng = row["pickup_lng"] as number
