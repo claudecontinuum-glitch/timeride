@@ -1,92 +1,76 @@
 # TimeRide
 
-App de mobility hiper-local para Siguatepeque, Honduras.
-Conductores publican ubicacion y rutas en vivo. Pasajeros ven conductores cercanos y piden taxis.
+> Taxis en tiempo real para Siguatepeque, Honduras.
+
+Pasajeros ven taxis cercanos en el mapa, piden uno, y siguen al taxi en vivo
+con ETA, foto del taxista, placa y color del vehiculo. Taxistas reciben las
+solicitudes en su pantalla y aceptan con un tap.
+
+**Beta activa:** [timeride-git-pivote-solo-taxis-alejandros-projects-4de18d02.vercel.app](https://timeride-git-pivote-solo-taxis-alejandros-projects-4de18d02.vercel.app)
+
+---
 
 ## Stack
 
-- Next.js 16 App Router
-- Supabase (Auth + Postgres + PostGIS + Realtime) — **pendiente conectar**
-- Leaflet + OpenStreetMap (gratis)
-- Tailwind CSS v4
-- TypeScript strict
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20Realtime-3ECF8E?logo=supabase)
+![Tailwind](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss)
+![Leaflet](https://img.shields.io/badge/Leaflet-OpenStreetMap-199900?logo=leaflet)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript)
+![Vercel](https://img.shields.io/badge/Deployed-Vercel-000?logo=vercel)
 
-## Correr localmente
+App web mobile-first. Cero dependencias de pago: Supabase free tier, Vercel
+free tier, OpenStreetMap (OSS), Leaflet (OSS).
+
+---
+
+## Como correr localmente
 
 ```bash
-# 1. Instalar dependencias (ya instaladas si clonaste el repo)
+git clone https://github.com/claudecontinuum-glitch/timeride.git
+cd timeride
 npm install
-
-# 2. Copiar env vars
-cp .env.example .env.local
-# Editar .env.local con tus credenciales de Supabase
-
-# 3. Correr dev server
+cp .env.example .env.local   # llenar con credenciales propias de Supabase
 npm run dev
 ```
 
-Abrir http://localhost:3000
+Abrir [http://localhost:3000](http://localhost:3000).
 
-## Auth en modo mock
-
-Mientras Supabase no este conectado, la app usa un mock de auth basado en cookies.
-Para testear:
-
-1. Ir a /signup y crear una cuenta con cualquier email/password
-2. El onboarding te pregunta tu rol (pasajero / conductor)
-3. Segun el rol, aterrizas en la pantalla correspondiente
-
-El mock persiste entre recargas via localStorage + cookie.
-
-## Env vars necesarias (cuando Supabase este listo)
+Variables requeridas en `.env.local`:
 
 | Variable | Descripcion |
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | URL del proyecto Supabase |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon key publica de Supabase |
 
-## TODO para conectar Supabase
+---
 
-Los lugares exactos de integracion estan marcados con `// TODO Supabase:` en el codigo:
+## Documentacion del proyecto
 
-- `lib/mocks/auth.ts` — reemplazar `useAuth()` por hook real con `@supabase/ssr`
-- `app/login/page.tsx` — `supabase.auth.signInWithPassword()`
-- `app/signup/page.tsx` — `supabase.auth.signUp()`
-- `app/onboarding/page.tsx` — `supabase.from("profiles").insert()`
-- `hooks/useDriverShift.ts` — INSERT en `route_paths`, `route_stops`, UPDATE en `driver_locations`
-- `hooks/useRideRequests.ts` — Supabase Realtime channel en `ride_requests`
-- `app/app/pasajero/page.tsx` — `useDriverLocations()` hook con query `ST_DWithin`
-- `app/app/settings/page.tsx` — `supabase.from("profiles").delete()` + `supabase.auth.signOut()`
-- `proxy.ts` — validar sesion Supabase real en vez de cookie mock
+Todo el detalle vive en el vault Alexandria, no aqui. El README solo
+contiene lo que casi nunca cambia.
 
-## Estructura
+- **Producto:** alcance v1, lo que esta IN/OUT — `Alexandria/Proyectos/timeride/PRD.md`
+- **Arquitectura:** stack detallado, paths, convenciones, gotchas — `Alexandria/Proyectos/timeride/CODEBASE.md`
+- **Decisiones:** D1-D10 con contexto y por que cada una — `Alexandria/Proyectos/timeride/DECISIONES.md`
+- **Diseno:** sistema visual v2, paleta, tipografia, animaciones — `Alexandria/Proyectos/timeride/DESIGN.md`
+- **Diario:** historial de sesiones con decisiones del dia — `Alexandria/Proyectos/timeride/DIARIO.md`
 
-```
-app/                    # Next.js App Router
-  layout.tsx            # Root layout
-  page.tsx              # Landing con redirect segun auth
-  login/                # Form login mock
-  signup/               # Form signup mock
-  onboarding/           # 2 pasos: rol + subtipo vehiculo
-  app/
-    layout.tsx          # Auth guard + NavBar
-    pasajero/           # Mapa con conductores activos
-    conductor/
-      bus/              # Pantalla bus y microbus (turno + path + paradas)
-      taxi/             # Pantalla taxi (disponibilidad + ride requests)
-    settings/           # Info perfil + borrar perfil
-components/
-  map/                  # MapView, DriverMarker, RoutePath, StopMarker
-  ui/                   # Button, Toast, RoleCard, BottomSheet
-  conductor/            # StartShiftButton, RegisterStopButton, RideRequestPopup
-hooks/                  # useGeolocation, useDriverShift, useRideRequests
-lib/
-  types.ts              # Tipos TypeScript del dominio
-  constants.ts          # SIGUA_CENTER, radios, intervalos
-  supabase.ts           # Browser client singleton
-  supabase-server.ts    # Server client con cookies
-  mocks/
-    auth.ts             # Mock de auth (cookie-based)
-    data.ts             # Datos mock: 3 conductores, 1 ruta
-proxy.ts                # Middleware de auth (Next.js 16)
-```
+Si encontras algo en el codigo que el README contradice, el codigo manda.
+Si encontras algo que el CODEBASE.md contradice, el codigo manda y el
+CODEBASE necesita actualizacion.
+
+---
+
+## Contexto
+
+Proyecto co-creado con Adrian Oliva, estudiante de Entrepreneurship en
+Siguatepeque. Demo en clase: 6 de mayo de 2026. Ale acompana como socio
+tecnico mientras Adrian lleva la vision de producto y la conversacion
+con usuarios reales en la ciudad.
+
+---
+
+## Licencia
+
+Sin licencia publica todavia. Codigo privado para evaluacion interna.
